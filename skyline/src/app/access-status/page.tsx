@@ -1,3 +1,4 @@
+import { signOut } from "@/server/actions/auth";
 import Link from "next/link";
 import { requireSessionUser, roleHome } from "@/server/auth";
 import { redirect } from "next/navigation";
@@ -15,6 +16,9 @@ export default async function AccessStatus() {
         {user.approvalReason ||
           "The designated Staff account must review your role request before club access is enabled."}
       </p>
+      <form action={signOut}>
+        <button className="button secondary mt-5">Sign out</button>
+      </form>
       <Link className="button secondary mt-5" href="/events">
         Browse public events
       </Link>

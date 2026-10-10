@@ -1,16 +1,20 @@
+import { emailDeliveryConfigured } from "@/server/email-transport";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ActionForm } from "@/components/club/action-form";
 import { currentUser } from "@/server/auth";
-import { verifyEmail, resendVerification } from "@/server/actions/auth";
+import {
+  verifyEmail,
+  resendVerification,
+  signOut,
+} from "@/server/actions/auth";
 
 export default async function VerifyEmailPage() {
   const user = await currentUser();
   if (!user) redirect("/login");
   const configured =
     process.env.EMAIL_VERIFICATION_ENABLED === "true" &&
-    !!process.env.RESEND_API_KEY &&
-    !!process.env.EMAIL_FROM &&
+    emailDeliveryConfigured() &&
     (process.env.OTP_SECRET?.length ?? 0) >= 32;
   return (
     <main className="login-wrap">
@@ -81,6 +85,9 @@ export default async function VerifyEmailPage() {
         <div className="flex flex-wrap gap-4 mt-6 text-xs">
           <Link href="/account">My account</Link>
           <Link href="/events">Browse events</Link>
+          <form action={signOut}>
+            <button className="section-link">Sign out</button>
+          </form>
         </div>
       </section>
     </main>

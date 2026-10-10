@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { PrismaClient, MembershipStatus, TransactionCategory, TransactionType } from '../src/generated/prisma';
+import { PrismaClient, MembershipStatus, TransactionCategory, TransactionType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 

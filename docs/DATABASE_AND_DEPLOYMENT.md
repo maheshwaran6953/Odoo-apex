@@ -14,8 +14,8 @@ npm run db:seed
 npm run dev
 ```
 
-`npm ci` runs `prisma generate` via postinstall, producing the custom client at
-`src/generated/prisma`. If installation scripts were disabled, run
+`npm ci` runs `prisma generate` via postinstall, producing the standard client in
+`node_modules/@prisma/client`. If installation scripts were disabled, run
 `npm run db:generate` explicitly. Never commit this generated client or its
 platform-specific engine binaries. Do not commit `.env` or SQLite database files.
 
@@ -29,10 +29,13 @@ use booking. Expiry and fundraiser dates are examples, not a current semester sc
 
 ## Current deployment status
 
-Deployment is not complete. A Windows production build of the source workspace
-failed during Next.js file tracing with an EPERM scandir error on
-`C:\Users\mahes\Application Data`. Do not advertise the development preview as
-an independently verified production deployment.
+The Windows production build now succeeds (10 October 2026). Prisma uses its
+standard client location, and Next.js file tracing is bounded to the application
+directory. An isolated production server on port 3002 returned HTTP 200 for the
+overview, login, members, events, door desk, merchandise, tasks, ledger, and
+announcements. Prisma read the existing SQLite records successfully.
+
+These are local release checks. Public hosting and deployment are not complete.
 
 SQLite is a local file. A release must use persistent, writable storage shared
 appropriately by the app, or migrate to a hosted database. An ephemeral filesystem
@@ -57,7 +60,7 @@ Remove-Item Env:SKYLINE_DIST_DIR
 
 ## Release work still required
 
-- Resolve and reproduce a successful production build on the target environment.
+- Reproduce the successful local production build on the chosen hosting environment.
 - Review dependency audit findings before a production release; do not force-upgrade blindly.
 - Set the deployment database URL and provision durable storage and backups.
 - Initialize schema using a controlled setup process; do not reseed production.

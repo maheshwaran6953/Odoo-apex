@@ -165,7 +165,8 @@ filters, variant/quantity controls, role-aware actions, and visible feedback.
 
 Next priorities:
 
-1. Make the repository installable for all teammates and resolve the production build.
+1. Repository installation and the local production build are now resolved;
+   teammates should follow `DATABASE_AND_DEPLOYMENT.md` to reproduce setup.
 2. Agree on expiry rules and payment simulation boundaries.
 3. Add attendance/revenue reporting, renewal reminders, and receipt/claimant records.
 4. Complete stock administration and order/pickup tracking.

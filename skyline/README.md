@@ -4,14 +4,31 @@
 
 Requirements: Node 20+, npm, and SQLite through Prisma.
 
-    cp .env.example .env
-    npm install
-    npx prisma generate
+    Copy-Item .env.example .env
+    npm ci
     npm run db:push
     npm run db:seed
     npm run dev
 
 Open http://localhost:3000.
+
+The database is SQLite, accessed through Prisma. With the example configuration,
+records live in `prisma/dev.db`. Each checkout has its own database file. `npm ci`
+generates the standard `@prisma/client`; if installation scripts were disabled,
+run `npm run db:generate` before starting or seeding. The seed command deletes
+existing records: skip it when keeping an existing club database.
+
+The production build and local startup were verified on 10 October 2026. To run
+the production app after local database setup:
+
+```powershell
+$env:SKYLINE_DIST_DIR = '.next-build'
+npm run build
+# Only if the build succeeds:
+npm start
+```
+
+Public deployment is still pending. SQLite needs persistent writable storage.
 
 The prototype uses demo data and simulated payments. Do not add real credentials. The main build contract is in ../docs/SKYLINE_VIBE_CODING_SPEC.md.
 

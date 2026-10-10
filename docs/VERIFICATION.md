@@ -6,7 +6,8 @@ checks. It does not claim an automated business-workflow test suite exists.
 ## Confirmed for this publication checkout
 
 - `npm ci` succeeded using the committed lockfile.
-- Its postinstall hook generated Prisma Client 6.19.3 in `src/generated/prisma`.
+- Its postinstall hook originally generated a custom Prisma Client; the release
+  correction now generates Prisma Client 6.19.3 in `node_modules/@prisma/client`.
 - `npm run typecheck` completed successfully.
 - `npm run verify` passed Prisma validation and TypeScript checks, then correctly exited with code 1 on the production build error. Its tracing failure involved the Windows Cookies directory; the direct build failure involved Application Data.
 - `.env`, SQLite files, generated Prisma output, and node_modules are ignored by Git.
@@ -35,7 +36,25 @@ fresh published clone.
 The earlier source-workspace build failed during Windows file tracing with an
 EPERM scandir error involving `C:\Users\mahes\Application Data`. A successfully
 rendered development server is not evidence of a successful production build.
-The publication checkout reproduced that failure: `npm run build` exited with code 1 during file tracing, followed by a webpack action-assets error. Production build and live deployment remain unverified.
+The publication checkout reproduced that failure: `npm run build` exited with code 1 during file tracing, followed by a webpack action-assets error.
+
+### Release correction, 10 October 2026
+
+- Switched the application and seed to the standard `@prisma/client` import.
+- Bounded Next.js tracing to the application directory and resolved the source
+  alias from the config file location.
+- `npm run db:generate` succeeded without resetting or seeding the database.
+- `SKYLINE_DIST_DIR=.next-production-fixed npm run build` completed successfully,
+  including TypeScript validation, page generation, and file tracing.
+- Started that build with `npm start -- --port 3002`.
+- Read-only HTTP requests returned 200 for `/`, `/login`, `/members`, `/events`,
+  `/events/check-in`, `/merchandise`, `/fundraisers`, `/treasurer`, and `/announcements`.
+- A Prisma read confirmed one member, one event, and two transactions in this
+  checkout's SQLite file. This is not a claim about another checkout's data.
+
+The production build and local startup are now verified. Public deployment,
+full mutation checks, and cross-device behavior remain unverified. No saved
+records were reset or reseeded during this correction.
 
 ## Reproducible verification command
 

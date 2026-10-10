@@ -13,7 +13,7 @@ export async function purchaseTicket(input: unknown) { await requireRole(['MEMBE
         throw new Error('Booking has closed for this event.'); if (event.tickets.filter(t => t.status !== 'CANCELLED').length >= event.capacity)
         throw new Error('This event is sold out.'); const member = memberId ? await tx.member.findUnique({ where: { id: memberId }, include: { membership: true } }) : null; if (memberId && !member)
         throw new Error('This member could not be found.'); const isMember = member?.membership?.status === 'ACTIVE' && member.membership.expiresAt >= new Date(); const ticket = await tx.ticket.create({ data: { eventId, memberId: member?.id, type: isMember ? 'MEMBER' : 'NON_MEMBER', priceCents: isMember ? event.memberPriceCents : event.nonMemberPriceCents, code: `SKY-${randomUUID().slice(0, 8).toUpperCase()}` } }); await tx.transaction.create({ data: { type: 'INCOME', category: 'TICKET', description: `${event.name} ticket`, amountCents: ticket.priceCents, memberId: member?.id } }); return ticket; });
-    
+
     return { ok: true, message: 'Your ticket is booked. Save your entry code below.', code: result.code };
 }
 catch (error) {

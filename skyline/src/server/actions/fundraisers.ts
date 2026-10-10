@@ -10,4 +10,3 @@ export async function moveTask(input: unknown) { await requireRole(['STAFF']); c
 export async function addTask(data: FormData) { await requireRole(['STAFF']); const title = String(data.get('title') ?? '').trim(); const description = String(data.get('description') ?? '').trim(); const assigneeId = String(data.get('assigneeId') ?? '') || undefined; const rawDate = String(data.get('dueAt') ?? ''); const dueAt = rawDate ? new Date(rawDate) : undefined; if (title.length < 3 || title.length > 200 || (dueAt && !Number.isFinite(dueAt.getTime())))
     return { ok: false, message: 'Add a task title of 3–200 characters and a valid due date.' }; if (assigneeId && !await db.member.findUnique({ where: { id: assigneeId } }))
     return { ok: false, message: 'Choose an existing volunteer.' }; await db.task.create({ data: { title, description: description || undefined, assigneeId, dueAt } });  return { ok: true, message: 'Task added to the To do column.' }; }
-

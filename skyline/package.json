@@ -8,7 +8,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:push": "node scripts/database.mjs push",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "node -e \"console.error('Demo seeding is disabled. Use administrative bootstrap for initial setup.'); process.exit(1)\"",
     "db:generate": "node scripts/database.mjs generate",
     "db:validate": "node scripts/database.mjs validate",
     "db:export": "node scripts/data-transfer.mjs export",
@@ -18,7 +18,12 @@
     "events:watch": "tsx scripts/event-jobs.ts --watch",
     "postinstall": "node scripts/database.mjs generate",
     "verify": "node scripts/verify.mjs",
-    "verify:payments": "tsx scripts/verify-payments.ts"
+    "verify:payments": "tsx scripts/verify-payments.ts",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"scripts/*.{ts,mjs}\" \"prisma/schema.prisma\" \"*.{json,mjs}\" --ignore-unknown",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"scripts/*.{ts,mjs}\" \"*.{json,mjs}\" --ignore-unknown",
+    "verify:otp": "tsx scripts/verify-otp.ts --temporary-fixtures",
+    "verify:events": "tsx scripts/verify-events.ts --temporary-fixtures",
+    "verify:finance": "tsx scripts/verify-finance.ts --temporary-fixtures"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -39,7 +44,10 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35",
     "postcss": "^8.4.49",
+    "prettier": "^3.9.10",
     "prisma": "6.19.3",
     "tailwindcss": "^3.4.16",
     "tsx": "^4.19.2",

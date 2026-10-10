@@ -13,3 +13,6 @@ skyline/src/generated/prisma/
 skyline/prisma/schema.postgresql.generated.prisma
 skyline/backups/
 skyline/prisma/server-only.generated.sql
+
+# Accidental npm invocation at archive root; app lockfile remains tracked.
+/package-lock.json

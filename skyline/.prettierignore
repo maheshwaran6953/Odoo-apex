@@ -1,0 +1,7 @@
+node_modules
+.next*
+src/generated
+backups
+prisma/*.generated.*
+package-lock.json
+.env*

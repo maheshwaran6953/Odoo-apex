@@ -1,3 +1,5 @@
+> Current repair/setup instructions: [Local runbook](docs/LOCAL_RUNBOOK.md). Old review/demo data was removed. Do not run demo seed. New accounts require OTP verification and designated Staff approval; real OTP email delivery is currently deferred.
+
 <div align="center">
 
 # 🏛️ Skyline Student Association

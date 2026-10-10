@@ -1,3 +1,5 @@
+> Historical review guide: the demo accounts and events below were removed during the authorized reset. Use [LOCAL_RUNBOOK.md](LOCAL_RUNBOOK.md) for current accounts, setup and limitations.
+
 # Skyline project review guide
 
 Prepared 10 October 2026 from the running app and current source. Razorpay is outside

@@ -33,9 +33,13 @@ const navigation = [
 export function ClubShell({
   children,
   role,
+  isApprover = false,
+  identity,
 }: {
   children: React.ReactNode;
   role: string;
+  isApprover?: boolean;
+  identity?: string;
 }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
@@ -89,7 +93,9 @@ export function ClubShell({
               role === "GUEST"
                 ? item.href === "/events"
                 : item.href.startsWith("/admin")
-                  ? role === "STAFF" || (item.href === "/admin/payments" && role === "TREASURER")
+                  ? item.href === "/admin/users"
+                    ? isApprover
+                    : role === "STAFF" || role === "TREASURER"
                   : item.href === "/members"
                     ? role === "STAFF" || role === "TREASURER"
                     : item.href === "/treasurer"
@@ -128,7 +134,9 @@ export function ClubShell({
           <span className="avatar small">{role.charAt(0)}</span>
           <div>
             <strong>{role.charAt(0) + role.slice(1).toLowerCase()} desk</strong>
-            <span>Account-based access</span>
+            <span className="break-all">
+              {identity || "Account-based access"}
+            </span>
           </div>
         </div>
       </aside>

@@ -47,7 +47,9 @@ export default async function MyEventsPage() {
           </Link>
         }
       />
-      <Link className="button secondary mb-5" href="/payments">My checkouts & test payments</Link>
+      <Link className="button secondary mb-5" href="/payments">
+        My checkouts & test payments
+      </Link>
       {!user.emailVerifiedAt && (
         <div className="form-feedback failure mb-5">
           <p>
@@ -110,13 +112,15 @@ export default async function MyEventsPage() {
               <div className="flex-1 min-w-[180px]">
                 <h3 className="font-semibold">{entry.event.name}</h3>
                 <p className="subtext mt-2">
-                  {entry.status === "PAYMENT_PENDING" ? "Offer transferred to checkout. Open My payments to finish or release the hold." : entry.status === "WAITING"
-                    ? `Position ${positions[index]} · offers follow joining order`
-                    : entry.status === "OFFERED" &&
-                        entry.offerExpiresAt &&
-                        entry.offerExpiresAt > new Date()
-                      ? `Seat held until ${entry.offerExpiresAt.toLocaleString()}`
-                      : "Offer expired. You may rejoin if the event remains full."}
+                  {entry.status === "PAYMENT_PENDING"
+                    ? "Offer transferred to checkout. Open My payments to finish or release the hold."
+                    : entry.status === "WAITING"
+                      ? `Position ${positions[index]} · offers follow joining order`
+                      : entry.status === "OFFERED" &&
+                          entry.offerExpiresAt &&
+                          entry.offerExpiresAt > new Date()
+                        ? `Seat held until ${entry.offerExpiresAt.toLocaleString()}`
+                        : "Offer expired. You may rejoin if the event remains full."}
                 </p>
               </div>
               <Link className="button small" href={`/events/${entry.eventId}`}>

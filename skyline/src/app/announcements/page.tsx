@@ -1,6 +1,96 @@
-import { db } from '@/lib/db';
-import { currentRole } from '@/server/auth';
-import { publishAnnouncement } from '@/server/actions/announcements';
-import { ActionForm } from '@/components/club/action-form';
-import { PageHeading, date, Empty } from '@/components/club/ui';
-export default async function AnnouncementsPage() { const [updates, role] = await Promise.all([db.announcement.findMany({ orderBy: { publishedAt: 'desc' } }), currentRole()]); return <main><PageHeading eyebrow="KEEPING EVERYONE IN THE LOOP" title="The noticeboard" description="Club news, dates to remember, and updates from the committee."/><div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]"><section className="space-y-4">{updates.map((update, index) => <article key={update.id} className="glass-panel panel"><div className="flex justify-between items-center mb-5"><span className="badge">{update.audience}</span><time className="subtext">{date(update.publishedAt)}</time></div><h2 className="text-xl font-semibold tracking-tight">{update.title}</h2><p className="text-sm leading-7 mt-3 whitespace-pre-line">{update.body}</p>{index === 0 && <p className="subtext mt-5 pt-4 border-t border-black/5">Latest from the committee</p>}</article>)}{!updates.length && <div className="glass-panel"><Empty>No updates yet. Watch this space.</Empty></div>}</section><section className="glass-panel panel h-fit"><h2 className="section-title">{role === 'MEMBER' ? 'A shared club space' : 'Post an update'}</h2>{role === 'MEMBER' ? <p className="subtext mt-3">Committee updates are published here. Ask Staff or the Treasurer if you have something to share.</p> : <><p className="subtext mt-2 mb-5">A useful update beats another buried group-chat message.</p><ActionForm action={publishAnnouncement}><label className="field"><span>Title</span><input className="input" name="title" required minLength={3} maxLength={120} placeholder="Bake-sale volunteers: meeting point"/></label><label className="field"><span>Message</span><textarea className="input" name="body" required minLength={10} maxLength={4000} placeholder="Share the details everyone needs to know."/></label><button className="button w-full">Publish to noticeboard</button></ActionForm><p className="subtext mt-4">Visible to everyone in the workspace. Email delivery is not connected.</p></>}</section></div></main>; }
+import { db } from "@/lib/db";
+import { currentRole } from "@/server/auth";
+import { publishAnnouncement } from "@/server/actions/announcements";
+import { ActionForm } from "@/components/club/action-form";
+import { PageHeading, date, Empty } from "@/components/club/ui";
+export default async function AnnouncementsPage() {
+  const [updates, role] = await Promise.all([
+    db.announcement.findMany({ orderBy: { publishedAt: "desc" } }),
+    currentRole(),
+  ]);
+  return (
+    <main>
+      <PageHeading
+        eyebrow="KEEPING EVERYONE IN THE LOOP"
+        title="The noticeboard"
+        description="Club news, dates to remember, and updates from the committee."
+      />
+      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+        <section className="space-y-4">
+          {updates.map((update, index) => (
+            <article key={update.id} className="glass-panel panel">
+              <div className="flex justify-between items-center mb-5">
+                <span className="badge">{update.audience}</span>
+                <time className="subtext">{date(update.publishedAt)}</time>
+              </div>
+              <h2 className="text-xl font-semibold tracking-tight">
+                {update.title}
+              </h2>
+              <p className="text-sm leading-7 mt-3 whitespace-pre-line">
+                {update.body}
+              </p>
+              {index === 0 && (
+                <p className="subtext mt-5 pt-4 border-t border-black/5">
+                  Latest from the committee
+                </p>
+              )}
+            </article>
+          ))}
+          {!updates.length && (
+            <div className="glass-panel">
+              <Empty>No updates yet. Watch this space.</Empty>
+            </div>
+          )}
+        </section>
+        <section className="glass-panel panel h-fit">
+          <h2 className="section-title">
+            {role === "MEMBER" ? "A shared club space" : "Post an update"}
+          </h2>
+          {role === "MEMBER" ? (
+            <p className="subtext mt-3">
+              Committee updates are published here. Ask Staff or the Treasurer
+              if you have something to share.
+            </p>
+          ) : (
+            <>
+              <p className="subtext mt-2 mb-5">
+                A useful update beats another buried group-chat message.
+              </p>
+              <ActionForm action={publishAnnouncement}>
+                <label className="field">
+                  <span>Title</span>
+                  <input
+                    className="input"
+                    name="title"
+                    required
+                    minLength={3}
+                    maxLength={120}
+                    placeholder="Bake-sale volunteers: meeting point"
+                  />
+                </label>
+                <label className="field">
+                  <span>Message</span>
+                  <textarea
+                    className="input"
+                    name="body"
+                    required
+                    minLength={10}
+                    maxLength={4000}
+                    placeholder="Share the details everyone needs to know."
+                  />
+                </label>
+                <button className="button w-full">
+                  Publish to noticeboard
+                </button>
+              </ActionForm>
+              <p className="subtext mt-4">
+                Visible to everyone in the workspace. Email delivery is not
+                connected.
+              </p>
+            </>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}

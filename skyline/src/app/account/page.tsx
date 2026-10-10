@@ -1,4 +1,4 @@
-import { createExpense } from '@/server/actions/treasurer';
+import { ExpenseAccountSection } from "@/components/club/expense-section";
 import { requireUser } from "@/server/auth";
 import { updateAccount, resendVerification } from "@/server/actions/auth";
 import { ActionForm } from "@/components/club/action-form";
@@ -47,8 +47,8 @@ export default async function AccountPage() {
                 </button>
               </ActionForm>
               <p className="subtext mt-3">
-                Delivery requires the email service. Club staff may confirm your
-                identity and email ownership in person.
+                Delivery requires the configured email service. New accounts
+                must verify ownership using an OTP.
               </p>
             </div>
           )}
@@ -77,7 +77,7 @@ export default async function AccountPage() {
           </ActionForm>
         </section>
       </div>
-      <section className="glass-panel panel mt-5 max-w-[640px]"><h2 className="section-title">Submit a club expense</h2><p className="subtext mt-2 mb-5">Keep your receipt. The treasurer will review the request before it affects the ledger.</p><ActionForm action={createExpense}><label className="field"><span>What was it for?</span><input className="input" name="description" minLength={3} maxLength={200} required/></label><label className="field"><span>Amount ($)</span><input className="input" name="amount" type="number" min="0.01" max="100000" step="0.01" required/></label><button className="button">Submit for review</button></ActionForm></section>
+      <ExpenseAccountSection userId={user.id} />
     </main>
   );
 }

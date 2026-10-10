@@ -24,7 +24,13 @@ export default async function ManageEventPage({
     where: { id: params.eventId },
     include: {
       tickets: true,
-      payments: { where: { status: { in: ["INIT", "CREATING", "PENDING"] }, expiresAt: { gt: new Date() } }, select: { id: true } },
+      payments: {
+        where: {
+          status: { in: ["INIT", "CREATING", "PENDING"] },
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true },
+      },
       waitlist: {
         include: { user: { select: { name: true, email: true } } },
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -108,14 +114,34 @@ export default async function ManageEventPage({
           <span>Offers reserve seats until expiry</span>
         </div>
         <div className="dark-card stat-card">
-          <p>{event.paymentMode === "RAZORPAY_TEST" ? "Test ticket value" : "Simulated ticket value"}</p>
+          <p>
+            {event.paymentMode === "RAZORPAY_TEST"
+              ? "Test ticket value"
+              : "Simulated ticket value"}
+          </p>
           <strong>
-            {money(registered.reduce((sum, t) => sum + t.priceCents, 0), event.currency)}
+            {money(
+              registered.reduce((sum, t) => sum + t.priceCents, 0),
+              event.currency,
+            )}
           </strong>
           <span>No gateway settlement</span>
         </div>
       </div>
-      <div className="glass-panel panel mb-5"><p className="subtext">{event.payments.length} active checkout holds · {event.currency} · {event.paymentMode === "RAZORPAY_TEST" ? "Razorpay Test Mode" : "Practice registration"}</p><Link href={`/admin/payments?eventId=${event.id}`} className="button secondary small mt-3">Review this event’s test payments</Link></div>
+      <div className="glass-panel panel mb-5">
+        <p className="subtext">
+          {event.payments.length} active checkout holds · {event.currency} ·{" "}
+          {event.paymentMode === "RAZORPAY_TEST"
+            ? "Razorpay Test Mode"
+            : "Practice registration"}
+        </p>
+        <Link
+          href={`/admin/payments?eventId=${event.id}`}
+          className="button secondary small mt-3"
+        >
+          Review this event’s test payments
+        </Link>
+      </div>
       <section className="glass-panel panel mb-6">
         <div className="panel-heading">
           <h2>Attendee register</h2>
@@ -297,30 +323,37 @@ export default async function ManageEventPage({
         <>
           <details className="disclosure">
             <summary>Register a verified attendee at the desk</summary>
-            {event.paymentMode === "RAZORPAY_TEST" ? <p className="subtext">This event requires each attendee to sign in and complete their own verified test checkout. Desk registration cannot bypass payment.</p> :
-            <ActionForm action={purchaseTicket}>
-              <input type="hidden" name="eventId" value={event.id} />
-              <label className="field">
-                <span>Verified account</span>
-                <select className="input" name="userId" required>
-                  {users.map((user) => (
-                    <option value={user.id} key={user.id}>
-                      {user.name} · {user.email}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Contact phone (optional)</span>
-                <input
-                  className="input"
-                  name="phone"
-                  type="tel"
-                  maxLength={30}
-                />
-              </label>
-              <button className="button">Confirm registration</button>
-            </ActionForm>}
+            {event.paymentMode === "RAZORPAY_TEST" ? (
+              <p className="subtext">
+                This event requires each attendee to sign in and complete their
+                own verified test checkout. Desk registration cannot bypass
+                payment.
+              </p>
+            ) : (
+              <ActionForm action={purchaseTicket}>
+                <input type="hidden" name="eventId" value={event.id} />
+                <label className="field">
+                  <span>Verified account</span>
+                  <select className="input" name="userId" required>
+                    {users.map((user) => (
+                      <option value={user.id} key={user.id}>
+                        {user.name} · {user.email}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Contact phone (optional)</span>
+                  <input
+                    className="input"
+                    name="phone"
+                    type="tel"
+                    maxLength={30}
+                  />
+                </label>
+                <button className="button">Confirm registration</button>
+              </ActionForm>
+            )}
           </details>
           <details className="disclosure">
             <summary>Edit event details</summary>

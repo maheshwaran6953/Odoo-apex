@@ -30,12 +30,18 @@ export default async function HomePage() {
   );
   const featured = upcoming[0] ?? events[events.length - 1];
   const openTasks = tasks.filter((task) => task.status !== "DONE");
-  const balance = transactions
-    .filter((t) => t.status === "posted")
-    .reduce(
-      (sum, t) => sum + (t.type === "INCOME" ? t.amountCents : -t.amountCents),
-      0,
+  const balances = new Map<string, number>();
+  for (const t of transactions.filter((t) => t.status === "posted"))
+    balances.set(
+      t.currency,
+      (balances.get(t.currency) || 0) +
+        (t.type === "INCOME" ? t.amountCents : -t.amountCents),
     );
+  const balanceLabel = balances.size
+    ? Array.from(balances, ([currency, value]) => money(value, currency)).join(
+        " / ",
+      )
+    : "No posted entries";
   return (
     <main>
       <PageHeading
@@ -68,7 +74,7 @@ export default async function HomePage() {
         />
         <Stat
           label="Club balance"
-          value={money(balance)}
+          value={balanceLabel}
           note="Posted income less posted expenses"
         />
       </div>
@@ -203,7 +209,9 @@ export default async function HomePage() {
           {!openTasks.length && (
             <p className="subtext flex items-center gap-2">
               <Check size={16} />
-              Everything on the board is done.
+              {tasks.length
+                ? "Everything on the board is done."
+                : "No volunteer tasks yet."}
             </p>
           )}
         </div>

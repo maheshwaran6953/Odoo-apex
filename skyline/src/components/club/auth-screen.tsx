@@ -87,6 +87,34 @@ export function AuthScreen({
               />
             </label>
           )}
+          {mode === "register" && (
+            <>
+              <label className="field">
+                <span>Confirm password</span>
+                <input
+                  className="input"
+                  name="confirmPassword"
+                  type="password"
+                  minLength={12}
+                  maxLength={256}
+                  required
+                  autoComplete="new-password"
+                />
+              </label>
+              <label className="field">
+                <span>Requested role</span>
+                <select
+                  className="input"
+                  name="requestedRole"
+                  defaultValue="MEMBER"
+                >
+                  <option value="MEMBER">Student / Member</option>
+                  <option value="STAFF">Staff</option>
+                  <option value="TREASURER">Treasurer</option>
+                </select>
+              </label>
+            </>
+          )}
           <button className="button w-full">
             {
               {
@@ -107,9 +135,9 @@ export function AuthScreen({
         </div>
         {mode === "register" && (
           <p className="subtext mt-5">
-            New accounts start as Member. Membership discounts require a
-            verified email linked to an active club membership. Staff access is
-            assigned by the club.
+            Requested roles require email verification and approval by the
+            designated Staff account. Membership discounts separately require an
+            active club membership.
           </p>
         )}
       </section>

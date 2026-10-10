@@ -20,14 +20,19 @@ export function LocalDateInput({
       );
     }
   }, [iso]);
+  const parsed = value ? new Date(value) : null;
+  const submitted =
+    parsed && Number.isFinite(parsed.getTime()) ? parsed.toISOString() : "";
   return (
-    <input
-      className="input"
-      name={name}
-      type="datetime-local"
-      required={required}
-      value={value}
-      onChange={(event) => setValue(event.target.value)}
-    />
+    <>
+      <input type="hidden" name={name} value={submitted} />
+      <input
+        className="input"
+        type="datetime-local"
+        required={required}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+      />
+    </>
   );
 }

@@ -31,8 +31,34 @@ export function EventFields({ event }: { event?: EventValues }) {
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="field"><span>Checkout mode</span><select className="input" name="paymentMode" defaultValue={event?.paymentMode || "RAZORPAY_TEST"}><option value="RAZORPAY_TEST">Razorpay Test Mode — verified checkout</option><option value="PRACTICE">Practice — simulated registration</option></select></label>
-        <label className="field"><span>Price currency</span><select className="input" name="currency" defaultValue={event?.currency || "INR"}><option value="INR">INR (₹) — Razorpay Test Mode</option><option value="USD">USD ($) — legacy practice events</option></select><span className="subtext">Test checkout requires INR and prices of ₹1 or more. Practice uses USD. Currency/mode are locked after booking history exists.</span></label>
+        <label className="field">
+          <span>Checkout mode</span>
+          <select
+            className="input"
+            name="paymentMode"
+            defaultValue={event?.paymentMode || "PRACTICE"}
+          >
+            <option value="RAZORPAY_TEST">
+              Razorpay Test Mode — verified checkout
+            </option>
+            <option value="PRACTICE">Practice — simulated registration</option>
+          </select>
+        </label>
+        <label className="field">
+          <span>Price currency</span>
+          <select
+            className="input"
+            name="currency"
+            defaultValue={event?.currency || "USD"}
+          >
+            <option value="INR">INR (₹) — Razorpay Test Mode</option>
+            <option value="USD">USD ($) — legacy practice events</option>
+          </select>
+          <span className="subtext">
+            Test checkout requires INR and prices of ₹1 or more. Practice uses
+            USD. Currency/mode are locked after booking history exists.
+          </span>
+        </label>
         <label className="field">
           <span>Event name</span>
           <input
@@ -79,7 +105,7 @@ export function EventFields({ event }: { event?: EventValues }) {
             type="number"
             min="1"
             max="10000"
-            defaultValue={event?.capacity ?? 80}
+            defaultValue={event?.capacity ?? ""}
             required
           />
         </label>
@@ -102,7 +128,7 @@ export function EventFields({ event }: { event?: EventValues }) {
             min="0"
             max="100000"
             step="0.01"
-            defaultValue={(event?.memberPriceCents ?? 15000) / 100}
+            defaultValue={event ? event.memberPriceCents / 100 : ""}
             required
           />
         </label>
@@ -115,7 +141,7 @@ export function EventFields({ event }: { event?: EventValues }) {
             min="0"
             max="100000"
             step="0.01"
-            defaultValue={(event?.nonMemberPriceCents ?? 20000) / 100}
+            defaultValue={event ? event.nonMemberPriceCents / 100 : ""}
             required
           />
         </label>

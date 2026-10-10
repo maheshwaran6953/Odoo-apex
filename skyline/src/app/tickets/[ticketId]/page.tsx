@@ -71,7 +71,12 @@ export default async function TicketPage({
           </div>
           <div>
             <dt className="subtext">Recorded price</dt>
-            <dd>{money(ticket.priceCents, ticket.currency)} · {ticket.paymentMode === "RAZORPAY_TEST" ? "Razorpay TEST payment" : "simulated payment"}</dd>
+            <dd>
+              {money(ticket.priceCents, ticket.currency)} ·{" "}
+              {ticket.paymentMode === "RAZORPAY_TEST"
+                ? "Razorpay TEST payment"
+                : "simulated payment"}
+            </dd>
           </div>
           <div>
             <dt className="subtext">Entry code</dt>
@@ -79,7 +84,14 @@ export default async function TicketPage({
           </div>
         </dl>
         <div className="flex gap-3 mt-5 print:hidden">
-          {ticket.payments[0] && <Link className="button secondary" href={`/payments/${ticket.payments[0].id}`}>Payment & refund status</Link>}
+          {ticket.payments[0] && (
+            <Link
+              className="button secondary"
+              href={`/payments/${ticket.payments[0].id}`}
+            >
+              Payment & refund status
+            </Link>
+          )}
           <Link className="button secondary" href={`/events/${ticket.eventId}`}>
             Event details
           </Link>
@@ -98,7 +110,9 @@ export default async function TicketPage({
             <input type="hidden" name="ticketId" value={ticket.id} />
             <p className="subtext mb-4">
               This revokes your ticket and releases your place to the waitlist.
-              {ticket.paymentMode === "RAZORPAY_TEST" ? "Your test refund will require separate staff processing and provider confirmation. No real funds are involved." : "No real payment or refund is involved."}
+              {ticket.paymentMode === "RAZORPAY_TEST"
+                ? "Your test refund will require separate staff processing and provider confirmation. No real funds are involved."
+                : "No real payment or refund is involved."}
             </p>
             <button className="button secondary">
               Cancel registration & release seat

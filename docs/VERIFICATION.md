@@ -1,6 +1,18 @@
 # Verification record and checklist
 
-## Event and account expansion — current results
+## Supabase migration — 10 October 2026
+
+- Working runtime/schema connection: Supabase session pooler. Direct IPv6 runtime address was unreachable from this Windows computer and was replaced locally.
+- Fresh private SQLite export and file backup retained. Imported original member (1), membership (1), event (1), inventory items (3), transactions (2), ticket (1), tasks (3), announcement (1); other migrated tables were empty. Counts and identifiers match; ledger balance preserved.
+- All 17 application tables have RLS enabled and SELECT revoked for Supabase anon/authenticated roles.
+- Temporary hosted records verified concurrent final-seat booking, duplicate rejection, active-member/guest pricing, QR token generation, cancellation, FIFO held offers, expiry/next-person promotion, reminder deduplication and atomic one-time check-in. All temporary records were removed and source counts rechecked.
+- npm run verify passed PostgreSQL schema validation, TypeScript and the production build using .next-supabase-release.
+- Browser: public event listing loads the migrated Spring Gala from Supabase. App runs locally on port 3001; this is not public hosting.
+- Local reminder/waitlist worker runs against Supabase. No cloud scheduler is configured.
+- Resend API key authenticated successfully, but no sending domain is verified. Outbound email disabled locally by blank EMAIL_FROM. Actual email delivery remains unverified.
+- No initial staff account exists yet; user-selected private bootstrap credentials are required. Physical-camera scanning, public hosting, cloud scheduling and gateway payments remain outside these verification results.
+
+## Event and account expansion — earlier SQLite results
 
 Verified in an isolated SQLite copy, without changing the club's saved records:
 
@@ -19,9 +31,7 @@ Verified in an isolated SQLite copy, without changing the club's saved records:
   and production file tracing with `.next-event-final` (10 October 2026).
 - The local job command ran and accurately reported email was not configured.
 
-Not verified: physical-camera scanning, Resend delivery, hosted Supabase schema,
-RLS application, data import, PostgreSQL concurrency, public hosting or scheduler.
-Connection credentials are still required. No payment gateway was added.
+At that stage, hosted database checks were pending; the migration results above supersede that limitation. Physical-camera scanning, actual Resend delivery, public hosting and cloud scheduling remain unverified. No payment gateway was added.
 
 The older results below are historical. The practice role selector has been
 replaced, and the previously missing event-specific check-in/reporting is now built.

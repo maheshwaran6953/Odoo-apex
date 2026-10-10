@@ -20,6 +20,8 @@ const models = [
   "waitlistEntry",
   "notification",
   "emailMessage",
+  "payment",
+  "paymentWebhook",
 ];
 const dateFields = [
   "createdAt",
@@ -39,6 +41,10 @@ const dateFields = [
   "readAt",
   "sentAt",
   "claimedAt",
+  "capturedAt",
+  "refundedAt",
+  "lastCheckedAt",
+  "processedAt",
 ];
 async function main() {
   const [command, requestedPath] = process.argv.slice(2);
@@ -47,10 +53,6 @@ async function main() {
     requestedPath || "backups/skyline-transfer.json",
   );
   if (command === "export") {
-    if ((process.env.DATABASE_PROVIDER || "sqlite") !== "sqlite")
-      throw new Error(
-        "Export must run against the source SQLite database before switching providers.",
-      );
     const tables = await db.$transaction(async (tx) => {
       const data = {};
       for (const model of models) data[model] = await tx[model].findMany();
@@ -60,7 +62,7 @@ async function main() {
     writeFileSync(
       file,
       JSON.stringify(
-        { version: 1, exportedAt: new Date().toISOString(), tables },
+        { version: 2, exportedAt: new Date().toISOString(), tables },
         null,
         2,
       ),
@@ -75,8 +77,9 @@ async function main() {
         "Import must run against the target PostgreSQL database.",
       );
     const snapshot = JSON.parse(readFileSync(file, "utf8"));
+    if (snapshot.version === 1) { snapshot.tables.payment = []; snapshot.tables.paymentWebhook = []; }
     if (
-      snapshot.version !== 1 ||
+      ![1, 2].includes(snapshot.version) ||
       models.some((model) => !Array.isArray(snapshot.tables?.[model]))
     )
       throw new Error("Invalid snapshot.");

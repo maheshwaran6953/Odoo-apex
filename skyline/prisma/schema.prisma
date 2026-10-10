@@ -83,6 +83,9 @@ model Event {
   schedule String @default("")
   cancelledAt DateTime?
   version Int @default(0)
+  currency String @default("USD")
+  paymentMode String @default("PRACTICE")
+  payments Payment[]
   waitlist WaitlistEntry[]
 }
 model Ticket {
@@ -106,6 +109,9 @@ model Ticket {
   cancelledAt DateTime?
   reminderAt DateTime?
   ledgerId String? @unique
+  currency String @default("USD")
+  paymentMode String @default("PRACTICE")
+  payments Payment[]
   @@unique([eventId, userId])
 }
 
@@ -126,6 +132,43 @@ model User {
   waitlist WaitlistEntry[]
   notifications Notification[]
   tokens AccountToken[]
+  payments Payment[]
+}
+
+model Payment {
+  id String @id @default(cuid())
+  eventId String
+  event Event @relation(fields: [eventId], references: [id])
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  amountCents Int
+  currency String @default("INR")
+  ticketType TicketType
+  attendeePhone String?
+  status String @default("INIT")
+  providerOrderId String? @unique
+  providerPaymentId String? @unique
+  providerRefundId String? @unique
+  ticketId String?
+  ticket Ticket? @relation(fields: [ticketId], references: [id])
+  ledgerId String? @unique
+  expiresAt DateTime
+  capturedAt DateTime?
+  refundedAt DateTime?
+  lastCheckedAt DateTime?
+  issue String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([eventId, status, expiresAt])
+  @@index([userId, createdAt])
+}
+
+model PaymentWebhook {
+  id String @id
+  bodyHash String
+  eventType String
+  completed Boolean @default(false)
+  processedAt DateTime @default(now())
 }
 
 model Session {
@@ -235,6 +278,7 @@ model Transaction {
   memberId String?
   receiptUrl String?
   status String @default("posted")
+  currency String @default("USD")
   member Member? @relation(fields: [memberId], references: [id])
   createdAt DateTime @default(now())
 }

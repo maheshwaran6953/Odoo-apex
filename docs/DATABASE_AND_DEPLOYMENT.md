@@ -1,5 +1,11 @@
 # Database and deployment notes
 
+For payment setup/current verification boundaries, use `PAYMENTS.md` and
+`PAYMENT_VERIFICATION.md`. The payment upgrade adds two server-only tables; the
+active schema now has 19 application tables. Sandbox capture and cancellation
+are verified; actual full refund and public webhook delivery remain release gates.
+Historical deployment notes below describe earlier checks.
+
 For the current account, event, waitlist, reminder and Supabase setup, use
 `EVENTS_AND_SUPABASE.md`. The active source workspace now uses Supabase PostgreSQL via its session pooler, migrated and checked on 10 October 2026. Fresh checkouts still default to SQLite until privately configured. Do not replace an existing `.env` or reseed club records.
 

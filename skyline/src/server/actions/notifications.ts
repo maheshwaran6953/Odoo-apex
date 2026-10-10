@@ -20,6 +20,6 @@ export async function sendQueuedEmail() {
     ok: result.configured && result.failed === 0,
     message: result.configured
       ? `${result.sent} messages sent; ${result.failed} failed. Review delivery status below.`
-      : "Email delivery is not configured. Set RESEND_API_KEY and EMAIL_FROM. Messages remain queued.",
+      : "Email delivery is not configured. Configure SMTP or Resend settings and EMAIL_FROM. Messages remain queued.",
   };
 }

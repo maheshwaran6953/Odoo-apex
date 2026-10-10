@@ -1,3 +1,4 @@
+import { emailDeliveryConfigured } from "@/server/email-transport";
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -46,8 +47,7 @@ export async function issueEmailOtp(userId: string) {
   secret();
   if (
     process.env.EMAIL_VERIFICATION_ENABLED !== "true" ||
-    !process.env.RESEND_API_KEY ||
-    !process.env.EMAIL_FROM
+    !emailDeliveryConfigured()
   )
     throw new Error(
       "Email verification delivery is not configured yet. Please contact the designated Staff account.",
@@ -95,6 +95,7 @@ export async function issueEmailOtp(userId: string) {
       data: {
         status: "CANCELLED",
         lastError: "A newer verification code replaced this message.",
+        body: "Superseded verification email; code removed.",
       },
     });
     await tx.emailMessage.create({
@@ -105,7 +106,11 @@ export async function issueEmailOtp(userId: string) {
         body: `Your Skyline verification code is ${code}. It expires in 10 minutes. Only the latest code works. Do not share this code. If you did not request it, ignore this email.`,
       },
     });
-    return { queued: true as const, expiresAt };
+    return {
+      queued: true as const,
+      expiresAt,
+      emailKey: `otp:${userId}:${now.toISOString()}`,
+    };
   });
 }
 
@@ -149,7 +154,11 @@ export async function verifyEmailOtp(
         key: { startsWith: `otp:${userId}:` },
         status: { in: ["QUEUED", "FAILED", "SENDING"] },
       },
-      data: { status: "CANCELLED", lastError: "Email already verified." },
+      data: {
+        status: "CANCELLED",
+        lastError: "Email already verified.",
+        body: "Email verified; code removed.",
+      },
     });
     return "verified";
   });

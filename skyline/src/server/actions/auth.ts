@@ -1,4 +1,5 @@
 "use server";
+import { deliverQueuedEmail } from "@/server/email";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -181,7 +182,8 @@ export async function register(data: FormData) {
   }
   await createSession(user.id);
   try {
-    await issueEmailOtp(user.id);
+    const queued = await issueEmailOtp(user.id);
+    await deliverQueuedEmail({ key: queued.emailKey });
   } catch {
     /* Verification page explains deferred delivery; access remains blocked. */
   }
@@ -243,6 +245,8 @@ export async function verifyEmail(data: FormData) {
     return {
       ok: true,
       message: "Email verified. Your requested role now awaits Staff approval.",
+      href: "/access-status",
+      linkLabel: "View approval status",
     };
   } catch (error) {
     return {
@@ -256,10 +260,14 @@ export async function resendVerification() {
   if (user.emailVerifiedAt)
     return { ok: true, message: "Email is already verified." };
   try {
-    await issueEmailOtp(user.id);
+    const queued = await issueEmailOtp(user.id);
+    const delivery = await deliverQueuedEmail({ key: queued.emailKey });
     return {
-      ok: true,
-      message: "Verification email queued. Check your inbox after delivery.",
+      ok: delivery.sent === 1,
+      message:
+        delivery.sent === 1
+          ? "Verification email accepted by the provider. Check inbox or spam; use the latest code."
+          : "Delivery did not complete. Your account remains unverified. Check email configuration or retry after 60 seconds.",
     };
   } catch (error) {
     return {

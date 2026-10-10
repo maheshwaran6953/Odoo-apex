@@ -1,12 +1,22 @@
 import { db } from "@/lib/db";
+import {
+  emailDeliveryConfigured,
+  emailProvider,
+  sendEmail,
+  EmailTransportError,
+} from "@/server/email-transport";
 
-export async function deliverQueuedEmail() {
-  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM)
+export async function deliverQueuedEmail(
+  options: { key?: string } = {},
+  dispatch: typeof sendEmail = sendEmail,
+) {
+  if (!emailDeliveryConfigured())
     return { configured: false, sent: 0, failed: 0 };
   let sent = 0,
     failed = 0;
   const rows = await db.emailMessage.findMany({
     where: {
+      ...(options.key ? { key: options.key } : {}),
       status: { in: ["QUEUED", "FAILED", "SENDING"] },
       attempts: { lt: 5 },
       OR: [
@@ -61,6 +71,20 @@ export async function deliverQueuedEmail() {
         data: {
           status: "CANCELLED",
           lastError: "Superseded or expired before delivery.",
+          ...(row.key.startsWith("otp:")
+            ? { body: "Expired verification email; code removed." }
+            : {}),
+        },
+      });
+      continue;
+    }
+    if (emailProvider() === "smtp" && row.status === "SENDING") {
+      await db.emailMessage.updateMany({
+        where: { id: row.id, status: "SENDING", claimedAt: row.claimedAt },
+        data: {
+          status: "REVIEW",
+          lastError:
+            "SMTP delivery was interrupted; check delivery before retrying.",
         },
       });
       continue;
@@ -95,30 +119,23 @@ export async function deliverQueuedEmail() {
     });
     if (!claimed.count) continue;
     try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-          "Idempotency-Key": row.id,
-        },
-        body: JSON.stringify({
-          from: process.env.EMAIL_FROM,
-          to: [row.to],
-          subject: row.subject,
-          text: row.body,
-        }),
-        signal: AbortSignal.timeout(15000),
+      const providerId = await dispatch({
+        id: row.id,
+        to: row.to,
+        subject: row.subject,
+        body: row.body,
       });
-      if (!response.ok)
-        throw new Error(`Email provider returned HTTP ${response.status}`);
-      const result: { id?: string } = await response.json();
       await db.emailMessage.update({
         where: { id: row.id },
         data: {
           status: "SENT",
           sentAt: new Date(),
-          providerId: result.id,
+          providerId,
+          ...(row.key.startsWith("otp:")
+            ? {
+                body: "Verification email accepted; code removed from local outbox.",
+              }
+            : {}),
           lastError: null,
           claimedAt: null,
         },
@@ -128,9 +145,15 @@ export async function deliverQueuedEmail() {
       await db.emailMessage.update({
         where: { id: row.id },
         data: {
-          status: "FAILED",
+          status:
+            emailProvider() === "smtp" &&
+            !(error instanceof EmailTransportError && error.retrySafe)
+              ? "REVIEW"
+              : "FAILED",
           lastError:
-            error instanceof Error ? error.message : "Email delivery failed.",
+            error instanceof EmailTransportError
+              ? error.message
+              : "Email delivery failed; retry status requires review.",
           claimedAt: null,
         },
       });

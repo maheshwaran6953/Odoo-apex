@@ -1,5 +1,10 @@
 # Skyline: project walkthrough for the team
 
+Updated 10 October 2026: account sign-in and the expanded event workflow are now
+implemented. Read `EVENTS_AND_SUPABASE.md` for setup and current verification.
+The active database is still SQLite; Supabase connection and email delivery await
+private environment configuration. Payments remain simulated.
+
 ## 1. Understand the problem before the code
 
 Skyline is a student association that sells memberships, organizes events, sells
@@ -28,9 +33,12 @@ SQLite, or the three-role practice switcher; those are implementation decisions.
 - Treasurer: records dues, reviews the ledger, approves expenses, and publishes
   notices. Staff can also publish notices.
 
-Currently anyone can choose these roles at `/login`. There is no verified user
-identity, password, invitation, or ownership protection. The directory and ledger
-are visible throughout the practice workspace. This is not production access control.
+Users now sign in at `/login` with email/password accounts. New accounts start as
+Member; Staff assigns roles. Sessions are stored as opaque token hashes and revoked
+when signing out or changing access. Verified identity links a matching membership.
+The directory is restricted to Staff/Treasurer and the full ledger to Treasurer.
+Personal tickets and updates are checked against the signed-in user's ID. Staff
+can view attendees; the public cannot view private registration details.
 
 ## 3. Membership: who belongs to the club?
 
@@ -61,12 +69,15 @@ Past events remain visible but cannot accept new bookings.
 At `/events/check-in`, Staff enters a code. Unknown, invalid, and already-used codes
 are rejected. Successful entry records CHECKED_IN and a check-in time. Recent
 check-ins appear in the door desk. A keyboard scanner can type into the field;
-a camera/QR scanner is not implemented.
+camera QR decoding is now available with a manual-code fallback.
 
-Remaining: attendee list, complete attendance/revenue report, personal ticket
-history, cancellations/refunds, and check-in scoped to the selected event. The
-current desk accepts valid paid tickets across events rather than enforcing a
-particular event at that door. Guest names/contact details are not collected.
+The updated event module adds attendee lists, attendance counts, simulated ticket
+value, personal history, named attendees and optional phone, cancellation, QR
+tickets, camera decoding, selected-event check-in, calendar downloads, event changes,
+FIFO waitlists and expiring seat offers. Registration requires verified identity.
+In-app reminders work through the job worker; email delivery requires a provider.
+Actual payments and refunds are still deferred. Physical-camera behavior and hosted
+Supabase operation remain unverified. Existing legacy registrations are retained.
 
 ## 5. Merchandise: what is available in each size?
 
@@ -134,8 +145,7 @@ announcements, and posted financial records from SQLite. These are database-back
 figures rather than hard-coded live counters.
 
 Forms show validation errors, pending feedback, and persistent success confirmations.
-New ticket codes remain in a confirmation panel while page data refreshes. This
-refresh updates the current browser; there is no cross-device live streaming.
+New ticket codes remain in a confirmation panel while page data refreshes. Event views also poll every 20 seconds while visible. There is no cross-device streaming connection.
 
 ## 10. How the code works
 
@@ -157,9 +167,9 @@ uses to read and write them. Money is stored as integer cents: $12 is 1200 cents
 
 ## 11. What is done and what still matters most?
 
-Implemented local prototype: ten page types (overview, role selection, members,
+Implemented local prototype: the original ten page types (overview, role selection, members,
 events, event detail, door desk, shop, volunteer board, ledger, and noticeboard),
-plus loading/error/not-found states. Core mutations save real database records.
+plus ten new account/event page types, loading/error/not-found states. Core mutations save real database records.
 The recent UI revision added the glass visual system, mobile navigation, interactive
 filters, variant/quantity controls, role-aware actions, and visible feedback.
 
@@ -168,10 +178,12 @@ Next priorities:
 1. Repository installation and the local production build are now resolved;
    teammates should follow `DATABASE_AND_DEPLOYMENT.md` to reproduce setup.
 2. Agree on expiry rules and payment simulation boundaries.
-3. Add attendance/revenue reporting, renewal reminders, and receipt/claimant records.
+3. Event attendance/value reporting is implemented. Membership renewal reminders
+   and receipt/claimant records remain separate work.
 4. Complete stock administration and order/pickup tracking.
 5. Add mailing-list communication if required for the final scope.
-6. Add real identity and ownership protections before any real users or money.
+6. Account identity and ticket ownership checks are implemented. Complete deployment
+   hardening and service configuration before using real member data or money.
 7. Choose persistent database hosting, handle backups, and verify deployment.
 
 The presence of enum values such as Cancelled or Fulfilled in the schema does not

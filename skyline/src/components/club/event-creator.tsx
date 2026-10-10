@@ -1,3 +1,142 @@
-import { addEvent } from '@/server/actions/events';
-import { ActionForm } from './action-form';
-export function EventCreator() { return <details className="disclosure"><summary>+ Put an event on the calendar</summary><ActionForm action={addEvent}><div className="grid gap-4 md:grid-cols-2"><label className="field"><span>Event name</span><input className="input" name="name" required minLength={3} maxLength={100} placeholder="Autumn Social"/></label><label className="field"><span>Location</span><input className="input" name="location" required maxLength={200} placeholder="Student Union Hall"/></label><label className="field"><span>Date and time (local)</span><input className="input" name="startsAt" type="datetime-local" required/></label><label className="field"><span>Seat capacity</span><input className="input" name="capacity" type="number" min="1" max="10000" defaultValue="80" required/></label><label className="field"><span>Member price ($)</span><input className="input" name="memberPrice" type="number" min="0" max="100000" step="0.01" defaultValue="12.00" required/></label><label className="field"><span>Guest price ($)</span><input className="input" name="guestPrice" type="number" min="0" max="100000" step="0.01" defaultValue="18.00" required/></label></div><label className="field"><span>About the event</span><textarea className="input" name="description" minLength={10} maxLength={3000} required placeholder="What’s happening, who’s welcome, and anything guests need to know."/></label><button className="button">Create event & open bookings</button></ActionForm></details>; }
+import { LocalDateInput } from "./local-date-input";
+import { addEvent } from "@/server/actions/events";
+import { ActionForm } from "./action-form";
+export function EventCreator() {
+  return (
+    <details className="disclosure">
+      <summary>+ Put an event on the calendar</summary>
+      <ActionForm action={addEvent}>
+        <EventFields />
+        <button className="button">Create event & open bookings</button>
+      </ActionForm>
+    </details>
+  );
+}
+
+type EventValues = {
+  name: string;
+  location: string;
+  startsAt: Date;
+  registrationClosesAt: Date | null;
+  capacity: number;
+  memberPriceCents: number;
+  nonMemberPriceCents: number;
+  description: string;
+  schedule: string;
+  organizerEmail: string | null;
+};
+export function EventFields({ event }: { event?: EventValues }) {
+  return (
+    <>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="field">
+          <span>Event name</span>
+          <input
+            className="input"
+            name="name"
+            required
+            minLength={3}
+            maxLength={100}
+            defaultValue={event?.name}
+            placeholder="Autumn Social"
+          />
+        </label>
+        <label className="field">
+          <span>Location</span>
+          <input
+            className="input"
+            name="location"
+            required
+            maxLength={200}
+            defaultValue={event?.location}
+            placeholder="Student Union Hall"
+          />
+        </label>
+        <label className="field">
+          <span>Date and time (local)</span>
+          <LocalDateInput
+            name="startsAt"
+            required
+            iso={event?.startsAt.toISOString()}
+          />
+        </label>
+        <label className="field">
+          <span>Registration deadline (optional)</span>
+          <LocalDateInput
+            name="registrationClosesAt"
+            iso={event?.registrationClosesAt?.toISOString()}
+          />
+        </label>
+        <label className="field">
+          <span>Seat capacity</span>
+          <input
+            className="input"
+            name="capacity"
+            type="number"
+            min="1"
+            max="10000"
+            defaultValue={event?.capacity ?? 80}
+            required
+          />
+        </label>
+        <label className="field">
+          <span>Organizer contact email (optional)</span>
+          <input
+            className="input"
+            name="organizerEmail"
+            type="email"
+            maxLength={254}
+            defaultValue={event?.organizerEmail ?? ""}
+          />
+        </label>
+        <label className="field">
+          <span>Member price ($)</span>
+          <input
+            className="input"
+            name="memberPrice"
+            type="number"
+            min="0"
+            max="100000"
+            step="0.01"
+            defaultValue={(event?.memberPriceCents ?? 1200) / 100}
+            required
+          />
+        </label>
+        <label className="field">
+          <span>Guest price ($)</span>
+          <input
+            className="input"
+            name="guestPrice"
+            type="number"
+            min="0"
+            max="100000"
+            step="0.01"
+            defaultValue={(event?.nonMemberPriceCents ?? 1800) / 100}
+            required
+          />
+        </label>
+      </div>
+      <label className="field">
+        <span>About the event</span>
+        <textarea
+          className="input"
+          name="description"
+          minLength={10}
+          maxLength={3000}
+          required
+          defaultValue={event?.description}
+        />
+      </label>
+      <label className="field">
+        <span>Schedule & accessibility notes</span>
+        <textarea
+          className="input"
+          name="schedule"
+          maxLength={3000}
+          defaultValue={event?.schedule}
+          placeholder="18:00 Doors open · 18:30 Welcome · 19:00 Dinner. Step-free entry from the east door."
+        />
+      </label>
+    </>
+  );
+}

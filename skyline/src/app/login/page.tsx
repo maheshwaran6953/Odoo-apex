@@ -1,4 +1,4 @@
-import { ArrowUpRight } from 'lucide-react';
-import { setDemoRole } from '@/server/actions/auth';
-const roles = [{ role: 'MEMBER', title: 'Member', description: 'Find events, order club essentials, and stay in the loop.' }, { role: 'STAFF', title: 'Staff', description: 'Manage members, welcome guests, and coordinate volunteers.' }, { role: 'TREASURER', title: 'Treasurer', description: 'Record dues, review expenses, and look after club funds.' }] as const;
-export default function LoginPage() { return <main className="login-wrap"><section className="glass-panel login-panel"><div className="club-brand !p-0"><span className="brand-symbol">s.</span><span>skyline<span className="brand-caption">STUDENT ASSOCIATION</span></span></div><h1>Your club.<br />Your corner of campus.</h1><p className="subtext !text-sm mb-6">Choose a desk to explore the student association workspace.</p>{roles.map(({ role, title, description }) => <form key={role} action={setDemoRole}><input name="role" type="hidden" value={role}/><button className="login-role"><div><strong>{title}</strong><span>{description}</span></div><ArrowUpRight size={19} className="shrink-0 ml-4"/></button></form>)}<p className="subtext mt-7 border-t border-black/5 pt-5">Practice access: role selection is a local prototype feature, not a secure sign-in system.</p></section></main>; }
+import { AuthScreen } from "@/components/club/auth-screen";
+export default function LoginPage() {
+  return <AuthScreen mode="login" />;
+}

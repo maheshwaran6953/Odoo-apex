@@ -9,3 +9,4 @@
 @media(max-width:767px){.club-sidebar{visibility:hidden}.club-sidebar.is-open{visibility:visible}.mobile-sidebar-close{display:block;position:absolute;top:10px;right:10px}}
 .club-toast{position:fixed;right:26px;bottom:26px;z-index:60;width:390px;max-width:calc(100vw - 32px);padding:20px;border-radius:16px;background:#f8fbf3ed;border:1px solid #fff;backdrop-filter:blur(24px);box-shadow:0 12px 55px #223e302b;animation:enter .2s ease-out}
 @media(max-width:767px){.club-toast{right:16px;bottom:16px}}
+@media print{.club-sidebar,.club-topbar,.club-footer,.page-heading,.section-link{display:none!important}.club-content{margin:0}.page-container{padding:0}.printable-ticket{box-shadow:none;background:white;border:1px solid #bbb;backdrop-filter:none;color:#111}.ticket-qr svg{max-width:100%}}

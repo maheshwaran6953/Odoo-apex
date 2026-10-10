@@ -1,14 +1,267 @@
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { MapPin, CalendarDays, ArrowLeft } from 'lucide-react';
-import { db } from '@/lib/db';
-import { currentRole } from '@/server/auth';
-import { purchaseTicket } from '@/server/actions/events';
-import { ActionForm } from '@/components/club/action-form';
-import { PageHeading, money, date } from '@/components/club/ui';
-export default async function EventPage({ params }: {
-    params: {
-        eventId: string;
-    };
-}) { const [event, members, role] = await Promise.all([db.event.findUnique({ where: { id: params.eventId }, include: { tickets: true } }), db.member.findMany({ include: { membership: true }, orderBy: { name: 'asc' } }), currentRole()]); if (!event)
-    notFound(); const sold = event.tickets.filter(t => t.status !== 'CANCELLED').length; const seats = Math.max(0, event.capacity - sold); const past = event.startsAt < new Date(); return <main><Link href="/events" className="section-link mb-5"><ArrowLeft size={14}/>All events</Link><PageHeading eyebrow="YOUR INVITATION" title={event.name} description={event.description}/><div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]"><section className="glass-panel overflow-hidden"><div className="event-art !min-h-[240px]"><span className="poster-title !text-5xl">{event.name}</span><div className="date-tile"><strong>{event.startsAt.getDate()}</strong><span>{event.startsAt.toLocaleString('en-GB', { month: 'short' })}</span></div></div><div className="panel"><div className="grid gap-5 sm:grid-cols-2"><div><CalendarDays size={18} className="mb-2"/><strong className="text-sm">{date(event.startsAt)}</strong><p className="subtext mt-1">{event.startsAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · Local time</p></div><div><MapPin size={18} className="mb-2"/><strong className="text-sm">{event.location}</strong><p className="subtext mt-1">Bring your ticket code for entry</p></div></div><div className="border-t border-black/5 pt-5 mt-6"><h2 className="section-title">At the door</h2><p className="subtext mt-2">Save the code shown after booking. Door staff will check it against the event’s ticket list. Each code can only be used once.</p></div>{role === 'STAFF' && <Link href="/events/check-in" className="button secondary mt-5">Open check-in desk</Link>}</div></section><section className="glass-panel panel h-fit"><h2 className="section-title">{past ? 'Booking closed' : 'Book your place'}</h2><p className="subtext mt-2">{past ? 'This gathering has already taken place.' : `${seats} of ${event.capacity} seats still available.`}</p><div className="space-y-3 py-5 my-4 border-y border-black/5"><div className="flex justify-between text-sm"><span>Active member</span><strong>{money(event.memberPriceCents)}</strong></div><div className="flex justify-between text-sm"><span>Guest / non-member</span><strong>{money(event.nonMemberPriceCents)}</strong></div></div><ActionForm action={purchaseTicket}><input type="hidden" name="eventId" value={event.id}/><label className="field"><span>Who is this ticket for?</span><select className="input" name="memberId"><option value="">Guest · {money(event.nonMemberPriceCents)}</option>{members.map(member => { const active = member.membership?.status === 'ACTIVE' && member.membership.expiresAt >= new Date(); return <option key={member.id} value={member.id}>{member.name} · {money(active ? event.memberPriceCents : event.nonMemberPriceCents)}</option>; })}</select></label><p className="subtext mb-5">Member pricing is applied only to a current, active membership.</p><button disabled={past || !seats || role === 'TREASURER'} className="button w-full">{past ? 'Event has ended' : !seats ? 'Sold out' : role === 'TREASURER' ? 'Switch role to book' : 'Confirm ticket booking'}</button></ActionForm><p className="subtext mt-4">Practice booking · No card payment is collected.</p></section></div></main>; }
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { db } from "@/lib/db";
+import { currentUser } from "@/server/auth";
+import {
+  purchaseTicket,
+  joinWaitlist,
+  leaveWaitlist,
+} from "@/server/actions/events";
+import { bookingOpen } from "@/server/events-service";
+import { ActionForm } from "@/components/club/action-form";
+import { PageHeading, money, date } from "@/components/club/ui";
+export default async function EventPage({
+  params,
+}: {
+  params: { eventId: string };
+}) {
+  const [event, user] = await Promise.all([
+    db.event.findUnique({
+      where: { id: params.eventId },
+      include: {
+        tickets: { select: { status: true } },
+        waitlist: {
+          where: { status: "OFFERED", offerExpiresAt: { gt: new Date() } },
+          select: { id: true },
+        },
+      },
+    }),
+    currentUser(),
+  ]);
+  if (!event) notFound();
+  const ownTicket = user
+    ? await db.ticket.findUnique({
+        where: { eventId_userId: { eventId: event.id, userId: user.id } },
+      })
+    : null;
+  const ownWait = user
+    ? await db.waitlistEntry.findUnique({
+        where: { eventId_userId: { eventId: event.id, userId: user.id } },
+      })
+    : null;
+  const sold = event.tickets.filter((t) => t.status !== "CANCELLED").length;
+  const seats = Math.max(0, event.capacity - sold - event.waitlist.length);
+  const offer =
+    ownWait?.status === "OFFERED" &&
+    !!ownWait.offerExpiresAt &&
+    ownWait.offerExpiresAt > new Date();
+  const registered = ownTicket && ownTicket.status !== "CANCELLED";
+  const open = bookingOpen(event);
+  const position =
+    ownWait?.status === "WAITING"
+      ? await db.waitlistEntry.count({
+          where: {
+            eventId: event.id,
+            status: "WAITING",
+            OR: [
+              { createdAt: { lt: ownWait.createdAt } },
+              { createdAt: ownWait.createdAt, id: { lte: ownWait.id } },
+            ],
+          },
+        })
+      : null;
+  return (
+    <main>
+      <Link href="/events" className="section-link mb-5">
+        ← All events
+      </Link>
+      <PageHeading
+        eyebrow="YOUR INVITATION"
+        title={event.name}
+        description={event.description}
+        action={
+          user?.role === "STAFF" ? (
+            <Link className="button" href={`/events/${event.id}/manage`}>
+              Manage event
+            </Link>
+          ) : undefined
+        }
+      />
+      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+        <section className="glass-panel overflow-hidden">
+          <div className="event-art !min-h-[240px]">
+            <span className="poster-title !text-5xl">{event.name}</span>
+            <span
+              className={`badge ${event.cancelledAt ? "danger" : "active"}`}
+            >
+              {event.cancelledAt
+                ? "Cancelled"
+                : open
+                  ? "Upcoming gathering"
+                  : "Registration closed"}
+            </span>
+          </div>
+          <div className="panel">
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <h2 className="section-title">When</h2>
+                <p className="mt-2">
+                  {event.startsAt.toLocaleString("en-GB", {
+                    dateStyle: "full",
+                    timeStyle: "short",
+                  })}
+                </p>
+                <p className="subtext">
+                  Time shown in the server’s timezone. Calendar download
+                  preserves your local time.
+                </p>
+              </div>
+              <div>
+                <h2 className="section-title">Where</h2>
+                <p className="mt-2">{event.location}</p>
+                {event.organizerEmail && (
+                  <a
+                    className="section-link mt-2"
+                    href={`mailto:${event.organizerEmail}`}
+                  >
+                    Ask the organizer
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="border-t border-black/5 pt-5 mt-6">
+              <h2 className="section-title">The plan for the day</h2>
+              <p className="subtext whitespace-pre-line mt-2">
+                {event.schedule ||
+                  "The organizer will share the schedule here."}
+              </p>
+            </div>
+            <div className="border-t border-black/5 pt-5 mt-6">
+              <h2 className="section-title">A few things to know</h2>
+              <ul className="subtext list-disc pl-4 mt-2 space-y-2">
+                <li>
+                  One registration per verified account. Active linked
+                  memberships receive the member price.
+                </li>
+                <li>
+                  Bring your QR ticket or backup code. Entry is valid for this
+                  event only.
+                </li>
+                <li>
+                  You can cancel before the event starts, unless already checked
+                  in.
+                </li>
+                <li>
+                  Waitlist offers reserve one seat for up to two hours. Check My
+                  updates for your offer.
+                </li>
+              </ul>
+            </div>
+            <a
+              href={`/api/events/${event.id}/calendar`}
+              className="button secondary mt-5"
+            >
+              Add to calendar
+            </a>
+          </div>
+        </section>
+        <section className="glass-panel panel h-fit">
+          <h2 className="section-title">
+            {registered
+              ? "You’re on the list"
+              : offer
+                ? "A seat is held for you"
+                : !open
+                  ? "Registration closed"
+                  : !seats
+                    ? "Join the waitlist"
+                    : "Book your place"}
+          </h2>
+          <p className="subtext mt-2">
+            {sold} registered · {seats} seats available ·{" "}
+            {event.waitlist.length} held for offers
+          </p>
+          {event.registrationClosesAt && (
+            <p className="subtext mt-2">
+              Deadline: {event.registrationClosesAt.toLocaleString()}
+            </p>
+          )}
+          <div className="space-y-3 py-5 my-4 border-y border-black/5">
+            <div className="flex justify-between text-sm">
+              <span>Active member</span>
+              <strong>{money(event.memberPriceCents)}</strong>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>Guest / non-member</span>
+              <strong>{money(event.nonMemberPriceCents)}</strong>
+            </div>
+          </div>
+          {registered ? (
+            <Link className="button w-full" href={`/tickets/${ownTicket.id}`}>
+              View my QR ticket
+            </Link>
+          ) : !user ? (
+            <Link href="/login" className="button w-full">
+              Sign in to register
+            </Link>
+          ) : !user.emailVerifiedAt ? (
+            <div>
+              <p className="subtext">
+                Verify your email before booking. Staff can confirm your
+                identity if email delivery is not yet configured.
+              </p>
+              <Link className="button mt-3" href="/account">
+                Manage verification
+              </Link>
+            </div>
+          ) : !open ? (
+            <p className="subtext">
+              {event.cancelledAt
+                ? "This event was cancelled. Your updates have the details."
+                : "New registrations are no longer accepted."}
+            </p>
+          ) : ownWait?.status === "WAITING" ? (
+            <div>
+              <p className="text-sm mb-4">
+                Your waitlist position: <strong>{position}</strong>
+              </p>
+              <ActionForm action={leaveWaitlist}>
+                <input type="hidden" name="eventId" value={event.id} />
+                <button className="button secondary">Leave waitlist</button>
+              </ActionForm>
+            </div>
+          ) : seats > 0 || offer ? (
+            <ActionForm action={purchaseTicket}>
+              <input type="hidden" name="eventId" value={event.id} />
+              <p className="text-sm mb-4">
+                Registering as <strong>{user.name}</strong>
+                <br />
+                <span className="subtext">{user.email}</span>
+              </p>
+              {offer && (
+                <p className="form-feedback success mb-4">
+                  Confirm by {ownWait!.offerExpiresAt!.toLocaleString()}.
+                </p>
+              )}
+              <label className="field">
+                <span>Contact phone (optional)</span>
+                <input
+                  className="input"
+                  name="phone"
+                  type="tel"
+                  maxLength={30}
+                  autoComplete="tel"
+                />
+              </label>
+              <button className="button w-full">
+                {offer ? "Claim my seat" : "Confirm registration"}
+              </button>
+            </ActionForm>
+          ) : (
+            <ActionForm action={joinWaitlist}>
+              <input type="hidden" name="eventId" value={event.id} />
+              <p className="subtext mb-4">
+                Offers follow joining order. No seat or payment is taken when
+                you join.
+              </p>
+              <button className="button w-full">Join waitlist</button>
+            </ActionForm>
+          )}
+          <p className="subtext mt-4">
+            Practice payment · No money is charged.
+          </p>
+        </section>
+      </div>
+    </main>
+  );
+}

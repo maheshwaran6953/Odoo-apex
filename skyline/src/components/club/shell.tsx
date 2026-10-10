@@ -20,6 +20,8 @@ const navigation = [
   { href: "/members", name: "Members", icon: Users },
   { href: "/events", name: "Events & tickets", icon: CalendarDays },
   { href: "/my-events", name: "My events", icon: CalendarDays },
+  { href: "/payments", name: "My payments", icon: Wallet },
+  { href: "/admin/payments", name: "Test payment desk", icon: Wallet },
   { href: "/notifications", name: "My updates", icon: Megaphone },
   { href: "/account", name: "My account", icon: Users },
   { href: "/admin/users", name: "User access", icon: Users },
@@ -87,7 +89,7 @@ export function ClubShell({
               role === "GUEST"
                 ? item.href === "/events"
                 : item.href.startsWith("/admin")
-                  ? role === "STAFF"
+                  ? role === "STAFF" || (item.href === "/admin/payments" && role === "TREASURER")
                   : item.href === "/members"
                     ? role === "STAFF" || role === "TREASURER"
                     : item.href === "/treasurer"

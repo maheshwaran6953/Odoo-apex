@@ -24,11 +24,15 @@ type EventValues = {
   description: string;
   schedule: string;
   organizerEmail: string | null;
+  currency: string;
+  paymentMode: string;
 };
 export function EventFields({ event }: { event?: EventValues }) {
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2">
+        <label className="field"><span>Checkout mode</span><select className="input" name="paymentMode" defaultValue={event?.paymentMode || "RAZORPAY_TEST"}><option value="RAZORPAY_TEST">Razorpay Test Mode — verified checkout</option><option value="PRACTICE">Practice — simulated registration</option></select></label>
+        <label className="field"><span>Price currency</span><select className="input" name="currency" defaultValue={event?.currency || "INR"}><option value="INR">INR (₹) — Razorpay Test Mode</option><option value="USD">USD ($) — legacy practice events</option></select><span className="subtext">Test checkout requires INR and prices of ₹1 or more. Practice uses USD. Currency/mode are locked after booking history exists.</span></label>
         <label className="field">
           <span>Event name</span>
           <input
@@ -90,7 +94,7 @@ export function EventFields({ event }: { event?: EventValues }) {
           />
         </label>
         <label className="field">
-          <span>Member price ($)</span>
+          <span>Member price (selected currency)</span>
           <input
             className="input"
             name="memberPrice"
@@ -98,12 +102,12 @@ export function EventFields({ event }: { event?: EventValues }) {
             min="0"
             max="100000"
             step="0.01"
-            defaultValue={(event?.memberPriceCents ?? 1200) / 100}
+            defaultValue={(event?.memberPriceCents ?? 15000) / 100}
             required
           />
         </label>
         <label className="field">
-          <span>Guest price ($)</span>
+          <span>Guest price (selected currency)</span>
           <input
             className="input"
             name="guestPrice"
@@ -111,7 +115,7 @@ export function EventFields({ event }: { event?: EventValues }) {
             min="0"
             max="100000"
             step="0.01"
-            defaultValue={(event?.nonMemberPriceCents ?? 1800) / 100}
+            defaultValue={(event?.nonMemberPriceCents ?? 20000) / 100}
             required
           />
         </label>

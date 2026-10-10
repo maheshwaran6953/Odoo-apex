@@ -37,7 +37,7 @@ export default async function RootLayout({
   const forbidden =
     user &&
     ((staffOnly &&
-      user.role !== "STAFF" &&
+      user.role !== "STAFF" && !(path === "/admin/payments" && user.role === "TREASURER") &&
       !(path === "/members" && user.role === "TREASURER")) ||
       (path === "/treasurer" && user.role !== "TREASURER"));
   const role = user ? await currentRole() : "GUEST";
@@ -46,6 +46,7 @@ export default async function RootLayout({
       <body>
         <ClubFeedbackProvider>
           {(path.startsWith("/events") ||
+            path.startsWith("/payments") || path === "/admin/payments" ||
             path.startsWith("/tickets") ||
             ["/my-events", "/notifications"].includes(path)) && <LiveRefresh />}
           <ClubShell role={role}>

@@ -10,6 +10,8 @@ import {
 import { bookingOpen } from "@/server/events-service";
 import { ActionForm } from "@/components/club/action-form";
 import { PageHeading, money, date } from "@/components/club/ui";
+import { startEventCheckout } from "@/server/actions/payments";
+import { gatewayReady } from "@/server/razorpay";
 export default async function EventPage({
   params,
 }: {
@@ -20,6 +22,7 @@ export default async function EventPage({
       where: { id: params.eventId },
       include: {
         tickets: { select: { status: true } },
+        payments: { where: { status: { in: ["INIT", "CREATING", "PENDING"] }, expiresAt: { gt: new Date() } }, select: { id: true } },
         waitlist: {
           where: { status: "OFFERED", offerExpiresAt: { gt: new Date() } },
           select: { id: true },
@@ -40,7 +43,8 @@ export default async function EventPage({
       })
     : null;
   const sold = event.tickets.filter((t) => t.status !== "CANCELLED").length;
-  const seats = Math.max(0, event.capacity - sold - event.waitlist.length);
+  const seats = Math.max(0, event.capacity - sold - event.waitlist.length - event.payments.length);
+  const ownCheckout = user ? await db.payment.findFirst({ where: { eventId: event.id, userId: user.id, status: { in: ["INIT", "CREATING", "PENDING", "REVIEW", "REFUND_REQUIRED", "REFUND_PENDING"] } }, orderBy: { createdAt: "desc" } }) : null;
   const offer =
     ownWait?.status === "OFFERED" &&
     !!ownWait.offerExpiresAt &&
@@ -169,7 +173,7 @@ export default async function EventPage({
           </h2>
           <p className="subtext mt-2">
             {sold} registered · {seats} seats available ·{" "}
-            {event.waitlist.length} held for offers
+            {event.waitlist.length} held for offers · {event.payments.length} checkout holds
           </p>
           {event.registrationClosesAt && (
             <p className="subtext mt-2">
@@ -179,11 +183,11 @@ export default async function EventPage({
           <div className="space-y-3 py-5 my-4 border-y border-black/5">
             <div className="flex justify-between text-sm">
               <span>Active member</span>
-              <strong>{money(event.memberPriceCents)}</strong>
+              <strong>{money(event.memberPriceCents, event.currency)}</strong>
             </div>
             <div className="flex justify-between text-sm">
               <span>Guest / non-member</span>
-              <strong>{money(event.nonMemberPriceCents)}</strong>
+              <strong>{money(event.nonMemberPriceCents, event.currency)}</strong>
             </div>
           </div>
           {registered ? (
@@ -204,6 +208,8 @@ export default async function EventPage({
                 Manage verification
               </Link>
             </div>
+          ) : ownCheckout ? (
+            <Link className="button w-full" href={`/payments/${ownCheckout.id}`}>Open my checkout & payment status</Link>
           ) : !open ? (
             <p className="subtext">
               {event.cancelledAt
@@ -221,7 +227,7 @@ export default async function EventPage({
               </ActionForm>
             </div>
           ) : seats > 0 || offer ? (
-            <ActionForm action={purchaseTicket}>
+            <ActionForm action={event.paymentMode === "RAZORPAY_TEST" ? startEventCheckout : purchaseTicket}>
               <input type="hidden" name="eventId" value={event.id} />
               <p className="text-sm mb-4">
                 Registering as <strong>{user.name}</strong>
@@ -243,8 +249,9 @@ export default async function EventPage({
                   autoComplete="tel"
                 />
               </label>
-              <button className="button w-full">
-                {offer ? "Claim my seat" : "Confirm registration"}
+              {event.paymentMode === "RAZORPAY_TEST" && !gatewayReady() && <p className="form-feedback failure mb-4">Test checkout is not configured yet. Ask staff to add Razorpay test keys. No payment or registration will be made.</p>}
+              <button className="button w-full" disabled={event.paymentMode === "RAZORPAY_TEST" && !gatewayReady()}>
+                {event.paymentMode === "RAZORPAY_TEST" ? "Reserve seat & open test checkout" : offer ? "Claim my seat" : "Confirm registration"}
               </button>
             </ActionForm>
           ) : (
@@ -258,7 +265,7 @@ export default async function EventPage({
             </ActionForm>
           )}
           <p className="subtext mt-4">
-            Practice payment · No money is charged.
+            {event.paymentMode === "RAZORPAY_TEST" ? "Razorpay Test Mode · No real money charged. Seat held for up to 10 minutes; QR issued only after captured-payment verification." : "Practice payment · No money is charged."}
           </p>
         </section>
       </div>

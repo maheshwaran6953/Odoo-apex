@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
-export const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+export const money = (cents: number, currency = 'USD') => new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { style: 'currency', currency }).format(cents / 100);
 export const date = (value: Date | string) => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
 export function PageHeading({ eyebrow, title, description, action }: {
     eyebrow: string;

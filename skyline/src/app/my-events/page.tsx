@@ -14,7 +14,7 @@ export default async function MyEventsPage() {
   const waitlist = await db.waitlistEntry.findMany({
     where: {
       userId: user.id,
-      status: { in: ["WAITING", "OFFERED", "EXPIRED"] },
+      status: { in: ["WAITING", "OFFERED", "EXPIRED", "PAYMENT_PENDING"] },
     },
     include: { event: true },
     orderBy: { createdAt: "asc" },
@@ -47,6 +47,7 @@ export default async function MyEventsPage() {
           </Link>
         }
       />
+      <Link className="button secondary mb-5" href="/payments">My checkouts & test payments</Link>
       {!user.emailVerifiedAt && (
         <div className="form-feedback failure mb-5">
           <p>
@@ -109,7 +110,7 @@ export default async function MyEventsPage() {
               <div className="flex-1 min-w-[180px]">
                 <h3 className="font-semibold">{entry.event.name}</h3>
                 <p className="subtext mt-2">
-                  {entry.status === "WAITING"
+                  {entry.status === "PAYMENT_PENDING" ? "Offer transferred to checkout. Open My payments to finish or release the hold." : entry.status === "WAITING"
                     ? `Position ${positions[index]} · offers follow joining order`
                     : entry.status === "OFFERED" &&
                         entry.offerExpiresAt &&

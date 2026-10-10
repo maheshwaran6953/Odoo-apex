@@ -6,7 +6,7 @@ import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useClubFeedback } from "./feedback";
 import Link from "next/link";
 
-type Result = { ok: boolean; message: string; code?: string; href?: string };
+type Result = { ok: boolean; message: string; code?: string; href?: string; linkLabel?: string };
 type Props = {
   action: (data: FormData) => Promise<Result>;
   children: React.ReactNode;
@@ -83,7 +83,7 @@ export function ActionForm({ action, children, className = "" }: Props) {
             )}
             {result.href && (
               <Link href={result.href} className="button small mt-3">
-                Open QR ticket
+                {result.linkLabel || "Open QR ticket"}
               </Link>
             )}
           </div>

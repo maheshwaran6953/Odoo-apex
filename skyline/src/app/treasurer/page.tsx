@@ -94,14 +94,14 @@ export default async function TreasurerPage() {
                           ? "Posted"
                           : t.status === "void"
                             ? "Voided"
-                            : "Pending review"}
+                            : t.status === "test" ? "Razorpay TEST — excluded from balance" : "Pending review"}
                       </span>
                     </td>
                     <td
                       className={`text-right whitespace-nowrap font-semibold ${t.type === "INCOME" ? "text-[#397048]" : "text-[#9b5f46]"}`}
                     >
                       {t.type === "INCOME" ? "+" : "−"}
-                      {money(t.amountCents)}
+                      {money(t.amountCents, t.currency)}
                     </td>
                   </tr>
                 ))}

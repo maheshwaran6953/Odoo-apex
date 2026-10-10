@@ -31,6 +31,7 @@ export default async function EventsPage({
     },
     include: {
       tickets: { select: { status: true } },
+      payments: { where: { status: { in: ["INIT", "CREATING", "PENDING"] }, expiresAt: { gt: new Date() } }, select: { id: true } },
       waitlist: {
         where: { status: "OFFERED", offerExpiresAt: { gt: new Date() } },
         select: { id: true },
@@ -89,7 +90,7 @@ export default async function EventsPage({
           ).length;
           const seats = Math.max(
             0,
-            event.capacity - sold - event.waitlist.length,
+            event.capacity - sold - event.waitlist.length - event.payments.length,
           );
           const closed =
             event.startsAt <= new Date() ||
@@ -131,7 +132,7 @@ export default async function EventsPage({
                   <div className="flex justify-between subtext mb-2">
                     <span>{sold} registered</span>
                     <span>
-                      {seats} available · {event.waitlist.length} held
+                      {seats} available · {event.waitlist.length + event.payments.length} held
                     </span>
                   </div>
                   <div className="progress-track">
@@ -149,7 +150,7 @@ export default async function EventsPage({
                 )}
                 <div className="flex justify-between items-center mt-5">
                   <span className="subtext">
-                    Members <strong>{money(event.memberPriceCents)}</strong>
+                    Members <strong>{money(event.memberPriceCents, event.currency)}</strong>
                   </span>
                   <Link href={`/events/${event.id}`} className="button small">
                     View details <ArrowRight size={13} />

@@ -24,6 +24,7 @@ export default async function ManageEventPage({
     where: { id: params.eventId },
     include: {
       tickets: true,
+      payments: { where: { status: { in: ["INIT", "CREATING", "PENDING"] }, expiresAt: { gt: new Date() } }, select: { id: true } },
       waitlist: {
         include: { user: { select: { name: true, email: true } } },
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -107,13 +108,14 @@ export default async function ManageEventPage({
           <span>Offers reserve seats until expiry</span>
         </div>
         <div className="dark-card stat-card">
-          <p>Simulated ticket value</p>
+          <p>{event.paymentMode === "RAZORPAY_TEST" ? "Test ticket value" : "Simulated ticket value"}</p>
           <strong>
-            {money(registered.reduce((sum, t) => sum + t.priceCents, 0))}
+            {money(registered.reduce((sum, t) => sum + t.priceCents, 0), event.currency)}
           </strong>
           <span>No gateway settlement</span>
         </div>
       </div>
+      <div className="glass-panel panel mb-5"><p className="subtext">{event.payments.length} active checkout holds · {event.currency} · {event.paymentMode === "RAZORPAY_TEST" ? "Razorpay Test Mode" : "Practice registration"}</p><Link href={`/admin/payments?eventId=${event.id}`} className="button secondary small mt-3">Review this event’s test payments</Link></div>
       <section className="glass-panel panel mb-6">
         <div className="panel-heading">
           <h2>Attendee register</h2>
@@ -171,7 +173,7 @@ export default async function ManageEventPage({
                   <td>
                     {ticket.type}
                     <br />
-                    {money(ticket.priceCents)}
+                    {money(ticket.priceCents, ticket.currency)}
                   </td>
                   <td>
                     <span
@@ -295,6 +297,7 @@ export default async function ManageEventPage({
         <>
           <details className="disclosure">
             <summary>Register a verified attendee at the desk</summary>
+            {event.paymentMode === "RAZORPAY_TEST" ? <p className="subtext">This event requires each attendee to sign in and complete their own verified test checkout. Desk registration cannot bypass payment.</p> :
             <ActionForm action={purchaseTicket}>
               <input type="hidden" name="eventId" value={event.id} />
               <label className="field">
@@ -317,7 +320,7 @@ export default async function ManageEventPage({
                 />
               </label>
               <button className="button">Confirm registration</button>
-            </ActionForm>
+            </ActionForm>}
           </details>
           <details className="disclosure">
             <summary>Edit event details</summary>

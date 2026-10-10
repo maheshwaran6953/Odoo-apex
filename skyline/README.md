@@ -45,16 +45,25 @@ processing every five minutes. Staff can also trigger jobs manually. Email remai
 queued until RESEND_API_KEY and EMAIL_FROM are configured. Camera scanning requires
 HTTPS or localhost. Event views refresh every 20 seconds while visible.
 
-Payments are simulated. Confirmed registration and ledger income do not mean a
-card was charged. Cancellation revokes tickets and voids linked simulated income;
-it does not transfer a refund.
+Practice events retain simulated registration. INR events can now use Razorpay
+Test Mode: a matching captured payment must be verified on the server before a QR
+ticket is issued. Test transactions move no real money and do not increase posted
+club income. Cancellation revokes the ticket immediately; a refund is a separate,
+provider-confirmed operation. Live Razorpay keys are rejected.
+
+`/payments` shows your checkout history. `/payments/[paymentId]` provides payment
+status, bounded seat holds, retry/reconciliation and ticket links. Staff and
+Treasurer use `/admin/payments` for reconciliation and full test refunds.
+
+Read [payment setup and operation](../docs/PAYMENTS.md) and
+[the implementation plan](../docs/PAYMENT_IMPLEMENTATION_PLAN.md).
 
 ## Database and Supabase
 
-The active local database is SQLite (`prisma/dev.db` by default), accessed through
-Prisma 6.19.3. Supabase PostgreSQL support and safe export/import scripts are ready,
-but hosted migration awaits private connection strings. The project URL alone does
-not grant database access. Each SQLite checkout has its own records.
+The active workspace uses Supabase PostgreSQL through its session pooler and
+Prisma 6.19.3. Fresh checkouts default to SQLite (`prisma/dev.db`) until private
+PostgreSQL connection strings are configured. The project URL alone does not grant
+database access. Do not overwrite an existing `.env` or reseed an existing database.
 
 Read [the complete setup and event guide](../docs/EVENTS_AND_SUPABASE.md) before
 changing providers. It covers backups, staff bootstrap, migration, server-only table

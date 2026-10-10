@@ -17,7 +17,8 @@
     "events:jobs": "tsx scripts/event-jobs.ts",
     "events:watch": "tsx scripts/event-jobs.ts --watch",
     "postinstall": "node scripts/database.mjs generate",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "verify:payments": "tsx scripts/verify-payments.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

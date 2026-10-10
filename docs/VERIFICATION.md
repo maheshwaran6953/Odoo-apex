@@ -1,5 +1,9 @@
 # Verification record and checklist
 
+For current Razorpay Test Mode results, read `PAYMENT_VERIFICATION.md`. It separates
+actual provider checks from simulated integrity checks and records the unresolved
+refund/public-webhook gates. Earlier verification sections below remain historical.
+
 ## Supabase migration — 10 October 2026
 
 - Working runtime/schema connection: Supabase session pooler. Direct IPv6 runtime address was unreachable from this Windows computer and was replaced locally.

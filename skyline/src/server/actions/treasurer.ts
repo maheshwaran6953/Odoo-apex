@@ -9,4 +9,3 @@ export async function createExpense(input: unknown) { await requireRole(['MEMBER
     return { ok: false, message: 'Add a description and an amount between $0.01 and $100,000.' }; await db.transaction.create({ data: { type: 'EXPENSE', category: 'REIMBURSEMENT', description: data.description.trim(), amountCents: Number(data.amountCents), status: 'pending' } });  return { ok: true, message: 'Expense submitted. It will affect the balance after treasurer approval.' }; }
 export async function approveExpense(id: string) { await requireRole(['TREASURER']); const updated = await db.transaction.updateMany({ where: { id, type: 'EXPENSE', status: 'pending' }, data: { status: 'posted' } }); if (!updated.count)
     return { ok: false, message: 'This request has already been reviewed or is no longer available.' };  return { ok: true, message: 'Reimbursement approved and included in the club balance.' }; }
-

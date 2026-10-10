@@ -261,4 +261,3 @@ For UI work, add:
 7. Open Treasurer: show ticket, dues, merchandise, reimbursement lines, and resulting balance.
 
 The judging message: one system turns club activity into traceable work and money, while the interface feels like a focused campus tool rather than an anonymous admin template.
-

@@ -1,8 +1,7 @@
 # Database and deployment notes
 
 For the current account, event, waitlist, reminder and Supabase setup, use
-`EVENTS_AND_SUPABASE.md`. The active database remains SQLite until PostgreSQL
-credentials are configured. Do not replace an existing `.env` or reseed club records.
+`EVENTS_AND_SUPABASE.md`. The active source workspace now uses Supabase PostgreSQL via its session pooler, migrated and checked on 10 October 2026. Fresh checkouts still default to SQLite until privately configured. Do not replace an existing `.env` or reseed club records.
 
 ## Fresh local checkout
 

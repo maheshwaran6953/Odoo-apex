@@ -2,8 +2,7 @@
 
 Updated 10 October 2026: account sign-in and the expanded event workflow are now
 implemented. Read `EVENTS_AND_SUPABASE.md` for setup and current verification.
-The active database is still SQLite; Supabase connection and email delivery await
-private environment configuration. Payments remain simulated.
+The active source database is now Supabase PostgreSQL. Existing records were migrated and PostgreSQL event integrity checks passed. Email delivery awaits an owned, verified sender domain; the valid Resend key alone is insufficient. Older implementation explanations below describe the original SQLite setup. Payments remain simulated.
 
 ## 1. Understand the problem before the code
 
@@ -77,7 +76,7 @@ tickets, camera decoding, selected-event check-in, calendar downloads, event cha
 FIFO waitlists and expiring seat offers. Registration requires verified identity.
 In-app reminders work through the job worker; email delivery requires a provider.
 Actual payments and refunds are still deferred. Physical-camera behavior and hosted
-Supabase operation remain unverified. Existing legacy registrations are retained.
+public deployment remain unverified. Supabase data import, access restrictions and event integrity are now verified. Existing legacy registrations are retained.
 
 ## 5. Merchandise: what is available in each size?
 

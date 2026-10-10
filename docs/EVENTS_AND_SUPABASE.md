@@ -89,13 +89,13 @@ create a paid membership.
 The sample-data seed still deletes club sample records and is now blocked once
 accounts exist. Use it only in a disposable database. No account passwords are seeded.
 
-## Supabase: prepared, not connected yet
+## Supabase: migrated and verified on 10 October 2026
 
 Project URL supplied by the owner: https://webkrhiyflubauchtdgt.supabase.co
 
-That URL is not a PostgreSQL connection string. Before migration, the owner must
-configure the database password/connection strings locally. No hosted migration has
-been executed, and the active database remains SQLite until those values are available.
+The active source workspace now uses Supabase PostgreSQL. The original direct runtime address was unreachable from this computer; both runtime and schema operations use the verified session pooler. The private SQLite export and database backup remain under skyline/backups. All original record counts, identifiers and the ledger balance match after import. RLS is enabled and anon/authenticated table reads are revoked on all 17 application tables. No credentials are committed.
+
+The following is the repeatable migration procedure for a fresh target; do not rerun import on the populated database.
 
 1. Stop writes and retain the SQLite file backup. With DATABASE_PROVIDER=sqlite,
    run `npm run db:export`. This creates an ignored private snapshot under `backups`.
@@ -126,8 +126,7 @@ DIRECT_URL="the-schema-postgresql-connection-string"
    restoring DATABASE_PROVIDER=sqlite, the file connection, and regenerating the
    SQLite client. Writes made only in PostgreSQL are not automatically copied back.
 
-The PostgreSQL schema was validated offline. Connection, data import, RLS execution,
-PostgreSQL concurrency checks and hosted deployment are still awaiting credentials.
+PostgreSQL schema validation, hosted connection, data import, RLS/access checks and event concurrency checks passed. Public application deployment and a cloud scheduler remain pending.
 The script uses Prisma 6.19.3; it does not upgrade Prisma during migration.
 
 See the official integration guide: https://supabase.com/docs/guides/database/prisma
@@ -186,7 +185,7 @@ role/session rejection. SQLite and PostgreSQL schema validation passed. Final `n
 VERIFICATION.md for the complete local verification record.
 
 Camera decoding is implemented but has not been exercised with a physical camera.
-Resend delivery and hosted Supabase operation cannot be verified without credentials.
+The Resend key was validated, but there are zero verified sending domains. EMAIL_FROM is blank locally to prevent failed delivery attempts; queued messages remain queued. With no owned domain/DNS access, production email delivery remains unavailable. In-app notifications and the local reminder/waitlist worker operate against Supabase. Actual provider acceptance/inbox delivery has not been tested.
 Email webhook delivery tracking, MFA, password-policy administration, distributed
 rate limiting, a production audit trail, actual payments and refunds are outside
 this slice. Do not describe these as implemented.

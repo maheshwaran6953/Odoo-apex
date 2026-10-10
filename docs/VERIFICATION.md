@@ -10,7 +10,7 @@
 - Browser: public event listing loads the migrated Spring Gala from Supabase. App runs locally on port 3001; this is not public hosting.
 - Local reminder/waitlist worker runs against Supabase. No cloud scheduler is configured.
 - Resend API key authenticated successfully, but no sending domain is verified. Outbound email disabled locally by blank EMAIL_FROM. Actual email delivery remains unverified.
-- No initial staff account exists yet; user-selected private bootstrap credentials are required. Physical-camera scanning, public hosting, cloud scheduling and gateway payments remain outside these verification results.
+- First staff account created from owner-supplied local credentials. Browser sign-in succeeded against Supabase; staff administration and event management pages loaded. Browser sign-out returned to login and revoked its Supabase session (zero remaining sessions). One-time BOOTSTRAP_PASSWORD removed from .env. No credentials or account details published. Physical-camera scanning, public hosting, cloud scheduling and gateway payments remain outside these verification results.
 
 ## Event and account expansion — earlier SQLite results
 

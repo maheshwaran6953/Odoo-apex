@@ -1,5 +1,31 @@
 # Verification record and checklist
 
+## Event and account expansion — current results
+
+Verified in an isolated SQLite copy, without changing the club's saved records:
+
+- Browser: account sign-in, member final-seat registration at the member price,
+  private QR display, waitlist position, cancellation with QR removal, reserved
+  offer and claim, staff attendance count, wrong-event rejection, valid check-in,
+  and duplicate check-in rejection with the recorded entry time.
+- Business checks: two concurrent last-seat requests produced one registration;
+  duplicate booking and taking another user's held seat were rejected; FIFO
+  promotion and expiry/next-person promotion worked; guest/member pricing was
+  selected by membership; two job runs created one reminder notice and email row.
+- Anonymous attendee export returned 403; a job without the secret returned 401;
+  forged role/session cookies redirected personal event access to login.
+- SQLite schema and offline PostgreSQL schema validation passed.
+- Final `npm run verify` passed schema validation, TypeScript, page generation,
+  and production file tracing with `.next-event-final` (10 October 2026).
+- The local job command ran and accurately reported email was not configured.
+
+Not verified: physical-camera scanning, Resend delivery, hosted Supabase schema,
+RLS application, data import, PostgreSQL concurrency, public hosting or scheduler.
+Connection credentials are still required. No payment gateway was added.
+
+The older results below are historical. The practice role selector has been
+replaced, and the previously missing event-specific check-in/reporting is now built.
+
 Date: 10 October 2026. This record distinguishes observed results from planned
 checks. It does not claim an automated business-workflow test suite exists.
 

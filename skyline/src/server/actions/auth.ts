@@ -1,5 +1,5 @@
 "use server";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import {
@@ -8,8 +8,16 @@ import {
   newToken,
   tokenHash,
 } from "@/lib/password";
-import { requireUser, requireRole } from "@/server/auth";
+import {
+  requireUser,
+  requireRole,
+  requireSessionUser,
+  requireApprover,
+  roleHome,
+} from "@/server/auth";
 import { linkVerifiedMembership } from "@/server/accounts-service";
+import { validName, validEmail } from "@/lib/validation";
+import { issueEmailOtp, verifyEmailOtp } from "@/server/otp-service";
 const dummyPasswordHash = hashPassword("not-a-user-password");
 
 async function createSession(userId: string) {
@@ -98,40 +106,86 @@ export async function login(data: FormData) {
   }
   await db.loginAttempt.deleteMany({ where: { id: key } });
   await createSession(user.id);
-  redirect("/my-events");
+  redirect(
+    !user.emailVerifiedAt
+      ? "/verify-email"
+      : user.approvalStatus !== "APPROVED"
+        ? "/access-status"
+        : roleHome(user.role),
+  );
 }
 export async function register(data: FormData) {
-  const name = String(data.get("name") || "").trim();
-  const email = String(data.get("email") || "")
-    .trim()
-    .toLowerCase();
-  const password = String(data.get("password") || "");
+  const name = String(data.get("name") || "").trim(),
+    email = String(data.get("email") || "")
+      .trim()
+      .toLowerCase(),
+    password = String(data.get("password") || ""),
+    requestedRole = String(data.get("requestedRole") || "MEMBER");
   if (
-    name.length < 2 ||
-    name.length > 100 ||
-    email.length > 254 ||
-    !/^\S+@\S+\.\S+$/.test(email) ||
+    !validName(name) ||
+    !validEmail(email) ||
     password.length < 12 ||
-    password.length > 256
+    password.length > 256 ||
+    password !== String(data.get("confirmPassword") || "") ||
+    !["MEMBER", "STAFF", "TREASURER"].includes(requestedRole)
   )
     return {
       ok: false,
-      message: "Use a name, valid email, and password of 12–256 characters.",
+      message:
+        "Check name, email, matching passwords (12–256 characters), and requested role.",
     };
+  const requestKey = tokenHash(
+    "registration:" +
+      (headers().get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        "local-client"),
+  );
+  const recent = await db.loginAttempt.findUnique({
+    where: { id: requestKey },
+  });
+  if (
+    recent &&
+    recent.failures >= 10 &&
+    Date.now() - recent.updatedAt.getTime() < 3600000
+  )
+    return {
+      ok: false,
+      message: "Registration limit reached. Try again in one hour.",
+    };
+  await db.loginAttempt.upsert({
+    where: { id: requestKey },
+    create: { id: requestKey, failures: 1 },
+    update: {
+      failures:
+        recent && Date.now() - recent.updatedAt.getTime() < 3600000
+          ? { increment: 1 }
+          : 1,
+    },
+  });
+  let user;
   try {
-    const user = await db.user.create({
-      data: { name, email, passwordHash: hashPassword(password) },
+    user = await db.user.create({
+      data: {
+        name,
+        email,
+        passwordHash: hashPassword(password),
+        requestedRole,
+        approvalStatus: "PENDING",
+        role: "MEMBER",
+      },
     });
-    await accountEmail(user.id, user.email, "VERIFY");
-    await createSession(user.id);
   } catch {
     return {
       ok: false,
-      message:
-        "This account could not be created. Try signing in or contact club staff.",
+      message: "Unable to create this account. If already registered, sign in.",
     };
   }
-  redirect("/my-events");
+  await createSession(user.id);
+  try {
+    await issueEmailOtp(user.id);
+  } catch {
+    /* Verification page explains deferred delivery; access remains blocked. */
+  }
+  redirect("/verify-email");
 }
 export async function requestReset(data: FormData) {
   const email = String(data.get("email") || "")
@@ -183,90 +237,111 @@ export async function resetPassword(data: FormData) {
   }
 }
 export async function verifyEmail(data: FormData) {
-  const id = tokenHash(String(data.get("token") || ""));
+  const user = await requireSessionUser();
   try {
-    await db.$transaction(async (tx) => {
-      const token = await tx.accountToken.findUnique({ where: { id } });
-      if (!token || token.kind !== "VERIFY" || token.expiresAt <= new Date())
-        throw new Error("Invalid link");
-      const user = await tx.user.findUniqueOrThrow({
-        where: { id: token.userId },
-      });
-      await tx.accountToken.delete({ where: { id } });
-      await linkVerifiedMembership(tx, user.id, user.email);
-    });
+    await verifyEmailOtp(user.id, String(data.get("code") || ""));
     return {
       ok: true,
-      message:
-        "Email verified. Any matching club membership is now linked to your account.",
+      message: "Email verified. Your requested role now awaits Staff approval.",
     };
-  } catch {
+  } catch (error) {
     return {
       ok: false,
-      message: "This verification link is invalid, expired, or already used.",
+      message: error instanceof Error ? error.message : "Verification failed.",
     };
   }
 }
 export async function resendVerification() {
-  const user = await requireUser();
+  const user = await requireSessionUser();
   if (user.emailVerifiedAt)
-    return { ok: true, message: "Your email is already verified." };
-  const recent = await db.accountToken.findFirst({
-    where: {
-      userId: user.id,
-      kind: "VERIFY",
-      expiresAt: { gt: new Date(Date.now() + 23 * 3600000 + 55 * 60000) },
-    },
-  });
-  if (recent)
+    return { ok: true, message: "Email is already verified." };
+  try {
+    await issueEmailOtp(user.id);
+    return {
+      ok: true,
+      message: "Verification email queued. Check your inbox after delivery.",
+    };
+  } catch (error) {
     return {
       ok: false,
       message:
-        "A verification message is already queued. Wait five minutes before requesting another.",
+        error instanceof Error
+          ? error.message
+          : "Unable to request verification.",
     };
-  await accountEmail(user.id, user.email, "VERIFY");
-  return {
-    ok: true,
-    message:
-      "Verification email queued. Delivery requires the configured email service.",
-  };
-}
-export async function updateAccount(data: FormData) {
-  const user = await requireUser();
-  await db.user.update({
-    where: { id: user.id },
-    data: { emailReminders: data.get("emailReminders") === "on" },
-  });
-  return {
-    ok: true,
-    message:
-      "Reminder preferences saved. In-app event notices remain available.",
-  };
+  }
 }
 export async function manageUser(data: FormData) {
-  await requireRole(["STAFF"]);
-  const actor = await requireUser();
-  const id = String(data.get("userId") || "");
-  const role = String(data.get("role") || "MEMBER");
-  if (!["MEMBER", "STAFF", "TREASURER"].includes(role) || id === actor.id)
+  const actor = await requireApprover(),
+    id = String(data.get("userId") || ""),
+    decision = String(data.get("decision") || ""),
+    reason = String(data.get("reason") || "").trim();
+  if (
+    !id ||
+    id === actor.id ||
+    !["APPROVED", "REJECTED", "DISABLED"].includes(decision) ||
+    reason.length > 500
+  )
     return {
       ok: false,
-      message: "Choose a valid role. You cannot change your own access here.",
+      message: "Choose a valid decision for another account.",
     };
-  await db.$transaction(async (tx) => {
-    await tx.user.update({
-      where: { id },
-      data: {
-        role,
-        disabledAt: data.get("disabled") === "on" ? new Date() : null,
-      },
+  if (decision === "REJECTED" && reason.length < 3)
+    return { ok: false, message: "Provide a rejection reason." };
+  try {
+    await db.$transaction(async (tx) => {
+      const target = await tx.user.findUniqueOrThrow({ where: { id } });
+      if (target.isRoleApprover)
+        throw Error("The designated approver cannot be changed here.");
+      if (
+        decision === "APPROVED" &&
+        (!target.emailVerifiedAt ||
+          !["MEMBER", "STAFF", "TREASURER"].includes(target.requestedRole))
+      )
+        throw Error("Verify email before approving a valid requested role.");
+      const changed = await tx.user.updateMany({
+        where: {
+          id,
+          approvalStatus: target.approvalStatus,
+          approvedAt: target.approvedAt,
+          requestedRole: target.requestedRole,
+          disabledAt: target.disabledAt,
+        },
+        data: {
+          approvalStatus:
+            decision === "DISABLED" ? target.approvalStatus : decision,
+          role: decision === "APPROVED" ? target.requestedRole : target.role,
+          approvedById: actor.id,
+          approvedAt: new Date(),
+          approvalReason: reason || null,
+          disabledAt: decision === "DISABLED" ? new Date() : null,
+        },
+      });
+      if (!changed.count)
+        throw Error("Account changed; refresh before reviewing.");
+      if (decision === "APPROVED" && target.requestedRole === "MEMBER") {
+        const member = await tx.member.upsert({
+          where: { email: target.email },
+          create: { name: target.name, email: target.email },
+          update: {},
+        });
+        await tx.user.update({ where: { id }, data: { memberId: member.id } });
+      }
+      await tx.session.deleteMany({ where: { userId: id } });
     });
-    await tx.session.deleteMany({ where: { userId: id } });
-  });
-  return {
-    ok: true,
-    message: "Access updated. Existing sessions for this user were revoked.",
-  };
+    return {
+      ok: true,
+      message: "Access decision recorded; existing sessions revoked.",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error && !("code" in error)
+          ? error.message
+          : "Unable to update access.",
+    };
+  }
 }
 export async function signOut() {
   const token = cookies().get("skyline_session")?.value;
@@ -276,24 +351,19 @@ export async function signOut() {
   redirect("/login");
 }
 
-export async function confirmIdentity(data: FormData) {
-  await requireRole(["STAFF"]);
-  if (data.get("confirm") !== "on")
-    return {
-      ok: false,
-      message:
-        "Confirm that you checked this person’s identity and email ownership.",
-    };
-  const id = String(data.get("userId") || "");
-  await db.$transaction(async (tx) => {
-    const user = await tx.user.findUniqueOrThrow({ where: { id } });
-    if (user.disabledAt)
-      throw new Error("Enable this account before verifying it.");
-    await linkVerifiedMembership(tx, id, user.email);
-    await tx.accountToken.deleteMany({ where: { userId: id, kind: "VERIFY" } });
-  });
+export async function confirmIdentity() {
+  await requireApprover();
   return {
-    ok: true,
-    message: "Identity confirmed by staff. Matching club membership linked.",
+    ok: false,
+    message: "New users must verify email with OTP. Manual bypass is disabled.",
   };
+}
+
+export async function updateAccount(data: FormData) {
+  const user = await requireUser();
+  await db.user.update({
+    where: { id: user.id },
+    data: { emailReminders: data.get("emailReminders") === "on" },
+  });
+  return { ok: true, message: "Preferences saved." };
 }

@@ -5,15 +5,45 @@ import { newToken } from "@/lib/password";
 export type EventTx = Prisma.TransactionClient;
 export const CHECKOUT_HOLD_STATES = ["INIT", "CREATING", "PENDING"];
 export async function paymentHoldCount(tx: EventTx, eventId: string) {
-  return tx.payment.count({ where: { eventId, status: { in: CHECKOUT_HOLD_STATES }, expiresAt: { gt: new Date() } } });
+  return tx.payment.count({
+    where: {
+      eventId,
+      status: { in: CHECKOUT_HOLD_STATES },
+      expiresAt: { gt: new Date() },
+    },
+  });
 }
 export async function expirePaymentHolds(tx: EventTx, eventId: string) {
   const now = new Date();
-  const expired = await tx.payment.findMany({ where: { eventId, status: { in: CHECKOUT_HOLD_STATES }, expiresAt: { lte: now } } });
+  const expired = await tx.payment.findMany({
+    where: {
+      eventId,
+      status: { in: CHECKOUT_HOLD_STATES },
+      expiresAt: { lte: now },
+    },
+  });
   for (const payment of expired) {
-    await tx.payment.update({ where: { id: payment.id }, data: { status: "EXPIRED", issue: "Seat hold expired. A later captured payment requires staff review." } });
-    const entry = await tx.waitlistEntry.findUnique({ where: { eventId_userId: { eventId, userId: payment.userId } } });
-    if (entry?.status === "PAYMENT_PENDING") await tx.waitlistEntry.update({ where: { id: entry.id }, data: { status: entry.offerExpiresAt && entry.offerExpiresAt > now ? "OFFERED" : "EXPIRED" } });
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: "EXPIRED",
+        issue:
+          "Seat hold expired. A later captured payment requires staff review.",
+      },
+    });
+    const entry = await tx.waitlistEntry.findUnique({
+      where: { eventId_userId: { eventId, userId: payment.userId } },
+    });
+    if (entry?.status === "PAYMENT_PENDING")
+      await tx.waitlistEntry.update({
+        where: { id: entry.id },
+        data: {
+          status:
+            entry.offerExpiresAt && entry.offerExpiresAt > now
+              ? "OFFERED"
+              : "EXPIRED",
+        },
+      });
   }
 }
 export async function eventTransaction<T>(
@@ -128,15 +158,33 @@ export async function promoteWaitlist(tx: EventTx, eventId: string) {
   const offers = await tx.waitlistEntry.count({
     where: { eventId, status: "OFFERED", offerExpiresAt: { gt: now } },
   });
-  const count = Math.max(0, event.capacity - registered - offers - await paymentHoldCount(tx, eventId));
+  const count = Math.max(
+    0,
+    event.capacity -
+      registered -
+      offers -
+      (await paymentHoldCount(tx, eventId)),
+  );
   const next = await tx.waitlistEntry.findMany({
-    where: { eventId, status: "WAITING" },
+    where: {
+      eventId,
+      status: "WAITING",
+      user: {
+        disabledAt: null,
+        emailVerifiedAt: { not: null },
+        approvalStatus: "APPROVED",
+      },
+    },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     take: count,
     include: { user: true },
   });
   for (const entry of next) {
-    if (entry.user.disabledAt) {
+    if (
+      entry.user.disabledAt ||
+      !entry.user.emailVerifiedAt ||
+      entry.user.approvalStatus !== "APPROVED"
+    ) {
       await tx.waitlistEntry.update({
         where: { id: entry.id },
         data: { status: "LEFT" },
@@ -173,14 +221,21 @@ export async function registerAttendee(
 ) {
   await promoteWaitlist(tx, eventId);
   const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
-  if (event.paymentMode !== "PRACTICE") throw new Error("This event requires verified Razorpay Test Mode checkout. Practice registration cannot bypass payment.");
+  if (event.paymentMode !== "PRACTICE")
+    throw new Error(
+      "This event requires verified Razorpay Test Mode checkout. Practice registration cannot bypass payment.",
+    );
   if (!bookingOpen(event))
     throw new Error("Registration is closed for this event.");
   const user = await tx.user.findUniqueOrThrow({
     where: { id: userId },
     include: { member: { include: { membership: true } } },
   });
-  if (user.disabledAt || !user.emailVerifiedAt)
+  if (
+    user.disabledAt ||
+    !user.emailVerifiedAt ||
+    user.approvalStatus !== "APPROVED"
+  )
     throw new Error(
       "Verify your email before registering. Club staff can also confirm your identity.",
     );
@@ -204,7 +259,13 @@ export async function registerAttendee(
     own?.status === "OFFERED" &&
     !!own.offerExpiresAt &&
     own.offerExpiresAt > new Date();
-  if (registered + reserved + await paymentHoldCount(tx, eventId) - (hasOffer ? 1 : 0) >= event.capacity)
+  if (
+    registered +
+      reserved +
+      (await paymentHoldCount(tx, eventId)) -
+      (hasOffer ? 1 : 0) >=
+    event.capacity
+  )
     throw new Error("No seats are available. Join the waitlist instead.");
   const membership = user.member?.membership;
   const isMember =
@@ -307,4 +368,46 @@ export async function processEventUpdates() {
       }
     });
   }
+}
+
+/** Caller must verify ownership; invoked under the event row lock. */
+export async function cancelTicketRegistration(tx: EventTx, id: string) {
+  const ticket = await tx.ticket.findUniqueOrThrow({
+    where: { id },
+    include: { event: true },
+  });
+  if (ticket.status === "CANCELLED")
+    throw new Error("This registration is already cancelled.");
+  if (ticket.status === "CHECKED_IN" || ticket.event.startsAt <= new Date())
+    throw new Error(
+      "Attendance has started. This registration cannot be cancelled.",
+    );
+  await tx.ticket.update({
+    where: { id },
+    data: { status: "CANCELLED", cancelledAt: new Date(), qrToken: null },
+  });
+  if (ticket.paymentMode === "RAZORPAY_TEST")
+    await tx.payment.updateMany({
+      where: { ticketId: id, status: "CONFIRMED", ledgerId: ticket.ledgerId },
+      data: {
+        status: "REFUND_REQUIRED",
+        issue:
+          "Ticket cancelled. A full test refund must be requested and confirmed separately.",
+      },
+    });
+  if (ticket.ledgerId && ticket.paymentMode !== "RAZORPAY_TEST")
+    await tx.transaction.update({
+      where: { id: ticket.ledgerId },
+      data: { status: "void" },
+    });
+  if (ticket.userId)
+    await notify(
+      tx,
+      ticket.userId,
+      `cancelled:${id}:${ticket.code}`,
+      "Registration cancelled",
+      `${ticket.event.name}: your place was released. ${ticket.paymentMode === "RAZORPAY_TEST" ? "Your test refund is required and must be confirmed separately by staff." : ticket.ledgerId ? "The linked simulated income entry was voided." : "This legacy ticket has no linked income entry; ask the treasurer to reconcile its record."} No real funds were involved.`,
+      "/my-events",
+    );
+  await promoteWaitlist(tx, ticket.eventId);
 }

@@ -3,7 +3,8 @@ loadEnvConfig(process.cwd());
 async function main() {
   const { processEventUpdates } = await import("../src/server/events-service");
   const { deliverQueuedEmail } = await import("../src/server/email");
-  const { processPaymentUpdates } = await import("../src/server/payments-service");
+  const { processPaymentUpdates } =
+    await import("../src/server/payments-service");
   do {
     try {
       await processPaymentUpdates();

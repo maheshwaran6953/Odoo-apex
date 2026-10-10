@@ -19,7 +19,15 @@ export async function deliverQueuedEmail() {
   });
   for (const row of rows) {
     let obsolete = false;
-    if (row.key.startsWith("account:")) {
+    if (row.key.startsWith("otp:")) {
+      const otp = await db.emailOtp.findUnique({
+        where: { userId: row.key.split(":")[1] },
+      });
+      obsolete =
+        !otp ||
+        otp.expiresAt <= new Date() ||
+        row.key !== `otp:${otp.userId}:${otp.requestedAt.toISOString()}`;
+    } else if (row.key.startsWith("account:")) {
       const token = await db.accountToken.findUnique({
         where: { id: row.key.slice(8) },
       });

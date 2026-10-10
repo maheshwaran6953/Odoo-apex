@@ -1,8 +1,10 @@
 "use server";
+import { moneyCents, validEmail, validName } from "@/lib/validation";
 import { db } from "@/lib/db";
 import { requireUser, requireRole } from "@/server/auth";
 import {
   eventTransaction,
+  cancelTicketRegistration,
   registerAttendee,
   promoteWaitlist,
   bookingOpen,
@@ -13,6 +15,12 @@ import {
 } from "@/server/events-service";
 
 function fail(error: unknown) {
+  if (error instanceof Error && error.name.startsWith("Prisma"))
+    return {
+      ok: false,
+      message:
+        "The event changed or could not be saved. Refresh and try again.",
+    };
   return {
     ok: false,
     message:
@@ -71,16 +79,35 @@ export async function joinWaitlist(data: FormData) {
       const existing = await tx.waitlistEntry.findUnique({
         where: { eventId_userId: { eventId, userId: user.id } },
       });
-      if (await tx.payment.count({ where: { eventId, userId: user.id, status: { in: CHECKOUT_HOLD_STATES }, expiresAt: { gt: new Date() } } })) throw new Error("Your checkout already holds a seat. Open My payments.");
+      if (
+        await tx.payment.count({
+          where: {
+            eventId,
+            userId: user.id,
+            status: { in: CHECKOUT_HOLD_STATES },
+            expiresAt: { gt: new Date() },
+          },
+        })
+      )
+        throw new Error(
+          "Your checkout already holds a seat. Open My payments.",
+        );
       if (existing && ["WAITING", "OFFERED"].includes(existing.status))
         throw new Error("You are already on the waitlist.");
       const sold = await tx.ticket.count({
         where: { eventId, status: { not: "CANCELLED" } },
       });
       const offers = await tx.waitlistEntry.count({
-        where: { eventId, status: "OFFERED" },
+        where: {
+          eventId,
+          status: "OFFERED",
+          offerExpiresAt: { gt: new Date() },
+        },
       });
-      if (sold + offers + await paymentHoldCount(tx, eventId) < event.capacity)
+      if (
+        sold + offers + (await paymentHoldCount(tx, eventId)) <
+        event.capacity
+      )
         throw new Error("Seats are available. Register directly instead.");
       const entry = await tx.waitlistEntry.upsert({
         where: { eventId_userId: { eventId, userId: user.id } },
@@ -115,7 +142,14 @@ export async function leaveWaitlist(data: FormData) {
   const eventId = String(data.get("eventId") || "");
   try {
     await eventTransaction(eventId, async (tx) => {
-      if (await tx.waitlistEntry.count({ where: { eventId, userId: user.id, status: "PAYMENT_PENDING" } })) throw new Error("Release the checkout hold from My payments before leaving this offer.");
+      if (
+        await tx.waitlistEntry.count({
+          where: { eventId, userId: user.id, status: "PAYMENT_PENDING" },
+        })
+      )
+        throw new Error(
+          "Release the checkout hold from My payments before leaving this offer.",
+        );
       await tx.waitlistEntry.updateMany({
         where: {
           eventId,
@@ -142,36 +176,7 @@ export async function cancelRegistration(data: FormData) {
     return { ok: false, message: "Registration not found." };
   try {
     await eventTransaction(existing.eventId, async (tx) => {
-      const ticket = await tx.ticket.findUniqueOrThrow({
-        where: { id },
-        include: { event: true },
-      });
-      if (ticket.status === "CANCELLED")
-        throw new Error("This registration is already cancelled.");
-      if (ticket.status === "CHECKED_IN" || ticket.event.startsAt <= new Date())
-        throw new Error(
-          "Attendance has started. This registration cannot be cancelled.",
-        );
-      await tx.ticket.update({
-        where: { id },
-        data: { status: "CANCELLED", cancelledAt: new Date(), qrToken: null },
-      });
-      if (ticket.paymentMode === "RAZORPAY_TEST") await tx.payment.updateMany({ where: { ticketId: id, status: "CONFIRMED", ledgerId: ticket.ledgerId }, data: { status: "REFUND_REQUIRED", issue: "Ticket cancelled. A full test refund must be requested and confirmed separately." } });
-      if (ticket.ledgerId && ticket.paymentMode !== "RAZORPAY_TEST")
-        await tx.transaction.update({
-          where: { id: ticket.ledgerId },
-          data: { status: "void" },
-        });
-      if (ticket.userId)
-        await notify(
-          tx,
-          ticket.userId,
-          `cancelled:${id}:${ticket.code}`,
-          "Registration cancelled",
-          `${ticket.event.name}: your place was released. ${ticket.paymentMode === "RAZORPAY_TEST" ? "Your test refund is required and must be confirmed separately by staff." : ticket.ledgerId ? "The linked simulated income entry was voided." : "This legacy ticket has no linked income entry; ask the treasurer to reconcile its record."} No real funds were involved.`,
-          "/my-events",
-        );
-      await promoteWaitlist(tx, existing.eventId);
+      await cancelTicketRegistration(tx, id);
     });
     return {
       ok: true,
@@ -222,10 +227,22 @@ export async function checkInTicket(data: FormData) {
       message:
         "Entry opens 12 hours before the event and closes 12 hours after its start.",
     };
-  const saved = await eventTransaction(eventId, tx => tx.ticket.updateMany({
-    where: { id: ticket.id, status: "PAID", event: { cancelledAt: null, startsAt: { gte: new Date(Date.now()-12*3600000), lte: new Date(Date.now()+12*3600000) } } },
-    data: { status: "CHECKED_IN", checkedInAt: new Date() },
-  }));
+  const saved = await eventTransaction(eventId, (tx) =>
+    tx.ticket.updateMany({
+      where: {
+        id: ticket.id,
+        status: "PAID",
+        event: {
+          cancelledAt: null,
+          startsAt: {
+            gte: new Date(Date.now() - 12 * 3600000),
+            lte: new Date(Date.now() + 12 * 3600000),
+          },
+        },
+      },
+      data: { status: "CHECKED_IN", checkedInAt: new Date() },
+    }),
+  );
   if (!saved.count)
     return {
       ok: false,
@@ -249,23 +266,27 @@ export async function saveEvent(data: FormData) {
   const close = String(data.get("registrationClosesAt") || "");
   const registrationClosesAt = close ? new Date(close) : null;
   const capacity = Number(data.get("capacity"));
-  const memberPrice = Number(data.get("memberPrice"));
-  const guestPrice = Number(data.get("guestPrice"));
+  const memberCents = moneyCents(data.get("memberPrice"), true);
+  const guestCents = moneyCents(data.get("guestPrice"), true);
+  const memberPrice = (memberCents ?? -1) / 100;
+  const guestPrice = (guestCents ?? -1) / 100;
   const currency = String(data.get("currency") || "USD");
   const paymentMode = String(data.get("paymentMode") || "PRACTICE");
   if (
-    !["USD", "INR"].includes(currency) || !["PRACTICE", "RAZORPAY_TEST"].includes(paymentMode) ||
-    (paymentMode === "RAZORPAY_TEST" && (currency !== "INR" || memberPrice < 1 || guestPrice < 1)) ||
+    !["USD", "INR"].includes(currency) ||
+    !["PRACTICE", "RAZORPAY_TEST"].includes(paymentMode) ||
+    (paymentMode === "RAZORPAY_TEST" &&
+      (currency !== "INR" || memberPrice < 1 || guestPrice < 1)) ||
     (paymentMode === "PRACTICE" && currency !== "USD") ||
-    !/^\d+(\.\d{1,2})?$/.test(String(data.get("memberPrice"))) || !/^\d+(\.\d{1,2})?$/.test(String(data.get("guestPrice"))) ||
-    name.length < 3 ||
-    name.length > 100 ||
+    !/^\d+(\.\d{1,2})?$/.test(String(data.get("memberPrice"))) ||
+    !/^\d+(\.\d{1,2})?$/.test(String(data.get("guestPrice"))) ||
+    !validName(name, 3) ||
     description.length < 10 ||
     description.length > 3000 ||
     !location ||
     location.length > 200 ||
     schedule.length > 3000 ||
-    (organizerEmail && !/^\S+@\S+\.\S+$/.test(organizerEmail)) ||
+    (organizerEmail && !validEmail(organizerEmail)) ||
     !Number.isFinite(startsAt.getTime()) ||
     startsAt <= new Date() ||
     (registrationClosesAt &&
@@ -288,7 +309,8 @@ export async function saveEvent(data: FormData) {
         "Check event details, dates and prices. Razorpay Test Mode requires INR prices of ₹1 or more; practice events use USD. Use at most two decimal places.",
     };
   const fields = {
-    currency, paymentMode,
+    currency,
+    paymentMode,
     name,
     description,
     location,
@@ -297,8 +319,8 @@ export async function saveEvent(data: FormData) {
     startsAt,
     registrationClosesAt,
     capacity,
-    memberPriceCents: Math.round(memberPrice * 100),
-    nonMemberPriceCents: Math.round(guestPrice * 100),
+    memberPriceCents: memberCents!,
+    nonMemberPriceCents: guestCents!,
   };
   try {
     if (!id) await db.event.create({ data: fields });
@@ -318,7 +340,14 @@ export async function saveEvent(data: FormData) {
           },
         });
         const holds = await paymentHoldCount(tx, id);
-        if ((old.currency !== currency || old.paymentMode !== paymentMode) && (await tx.ticket.count({ where: { eventId: id } }) || await tx.payment.count({ where: { eventId: id } }))) throw new Error("Currency and checkout mode cannot change after a ticket or payment attempt exists.");
+        if (
+          (old.currency !== currency || old.paymentMode !== paymentMode) &&
+          ((await tx.ticket.count({ where: { eventId: id } })) ||
+            (await tx.payment.count({ where: { eventId: id } })))
+        )
+          throw new Error(
+            "Currency and checkout mode cannot change after a ticket or payment attempt exists.",
+          );
         if (capacity < registered + offers + holds)
           throw new Error(
             "Capacity cannot be lower than registrations plus active seat offers.",
@@ -347,10 +376,21 @@ export async function saveEvent(data: FormData) {
             ).map((t) => t.userId!),
           );
           for (const entry of await tx.waitlistEntry.findMany({
-            where: { eventId: id, status: { in: ["WAITING", "OFFERED", "PAYMENT_PENDING"] } },
+            where: {
+              eventId: id,
+              status: { in: ["WAITING", "OFFERED", "PAYMENT_PENDING"] },
+            },
           }))
             recipients.add(entry.userId);
-          for (const hold of await tx.payment.findMany({ where: { eventId: id, status: { in: CHECKOUT_HOLD_STATES }, expiresAt: { gt: new Date() } }, select: { userId: true } })) recipients.add(hold.userId);
+          for (const hold of await tx.payment.findMany({
+            where: {
+              eventId: id,
+              status: { in: CHECKOUT_HOLD_STATES },
+              expiresAt: { gt: new Date() },
+            },
+            select: { userId: true },
+          }))
+            recipients.add(hold.userId);
           for (const userId of Array.from(recipients))
             await notify(
               tx,
@@ -370,7 +410,28 @@ export async function saveEvent(data: FormData) {
             },
             data: { offerExpiresAt: registrationClosesAt },
           });
-        await tx.payment.updateMany({ where: { eventId: id, status: { in: CHECKOUT_HOLD_STATES }, expiresAt: { gt: new Date(Math.min(startsAt.getTime(), registrationClosesAt?.getTime() ?? Infinity)) } }, data: { expiresAt: new Date(Math.min(startsAt.getTime(), registrationClosesAt?.getTime() ?? Infinity)) } });
+        await tx.payment.updateMany({
+          where: {
+            eventId: id,
+            status: { in: CHECKOUT_HOLD_STATES },
+            expiresAt: {
+              gt: new Date(
+                Math.min(
+                  startsAt.getTime(),
+                  registrationClosesAt?.getTime() ?? Infinity,
+                ),
+              ),
+            },
+          },
+          data: {
+            expiresAt: new Date(
+              Math.min(
+                startsAt.getTime(),
+                registrationClosesAt?.getTime() ?? Infinity,
+              ),
+            ),
+          },
+        });
         await promoteWaitlist(tx, id);
       });
     return {
@@ -414,7 +475,19 @@ export async function cancelEvent(data: FormData) {
           where: { id: ticket.id },
           data: { status: "CANCELLED", cancelledAt: new Date(), qrToken: null },
         });
-        if (ticket.paymentMode === "RAZORPAY_TEST") await tx.payment.updateMany({ where: { ticketId: ticket.id, ledgerId: ticket.ledgerId, status: "CONFIRMED" }, data: { status: "REFUND_REQUIRED", issue: "Event cancelled. Full test refund requires staff processing." } });
+        if (ticket.paymentMode === "RAZORPAY_TEST")
+          await tx.payment.updateMany({
+            where: {
+              ticketId: ticket.id,
+              ledgerId: ticket.ledgerId,
+              status: "CONFIRMED",
+            },
+            data: {
+              status: "REFUND_REQUIRED",
+              issue:
+                "Event cancelled. Full test refund requires staff processing.",
+            },
+          });
         if (ticket.ledgerId && ticket.paymentMode !== "RAZORPAY_TEST")
           await tx.transaction.update({
             where: { id: ticket.ledgerId },
@@ -424,15 +497,31 @@ export async function cancelEvent(data: FormData) {
       const recipients = new Set(
         tickets.map((t) => t.userId).filter((v): v is string => !!v),
       );
-      const holds = await tx.payment.findMany({ where: { eventId, status: { in: CHECKOUT_HOLD_STATES } } });
+      const holds = await tx.payment.findMany({
+        where: { eventId, status: { in: CHECKOUT_HOLD_STATES } },
+      });
       for (const hold of holds) recipients.add(hold.userId);
-      await tx.payment.updateMany({ where: { eventId, status: { in: CHECKOUT_HOLD_STATES } }, data: { status: "EXPIRED", expiresAt: new Date(0), issue: "Event cancelled. Recheck any submitted payment; late captures require staff review." } });
+      await tx.payment.updateMany({
+        where: { eventId, status: { in: CHECKOUT_HOLD_STATES } },
+        data: {
+          status: "EXPIRED",
+          expiresAt: new Date(0),
+          issue:
+            "Event cancelled. Recheck any submitted payment; late captures require staff review.",
+        },
+      });
       for (const entry of await tx.waitlistEntry.findMany({
-        where: { eventId, status: { in: ["WAITING", "OFFERED", "PAYMENT_PENDING"] } },
+        where: {
+          eventId,
+          status: { in: ["WAITING", "OFFERED", "PAYMENT_PENDING"] },
+        },
       }))
         recipients.add(entry.userId);
       await tx.waitlistEntry.updateMany({
-        where: { eventId, status: { in: ["WAITING", "OFFERED", "PAYMENT_PENDING"] } },
+        where: {
+          eventId,
+          status: { in: ["WAITING", "OFFERED", "PAYMENT_PENDING"] },
+        },
         data: { status: "CLOSED" },
       });
       for (const userId of Array.from(recipients))

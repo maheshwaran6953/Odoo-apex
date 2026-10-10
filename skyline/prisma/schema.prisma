@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+}
+enum TicketType {
+  MEMBER
+  NON_MEMBER
+}
+enum TicketStatus {
+  RESERVED
+  PAID
+  CHECKED_IN
+  CANCELLED
+}
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED
+  CANCELLED
+}
+enum TaskStatus {
+  TODO
+  DOING
+  DONE
+}
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+enum TransactionCategory {
+  DUES
+  TICKET
+  MERCHANDISE
+  FUNDRAISER
+  REIMBURSEMENT
+  OTHER
+}
+
+model Member {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  phone String?
+  membership Membership?
+  tickets Ticket[]
+  orders MerchandiseOrder[]
+  tasks Task[]
+  transactions Transaction[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Membership {
+  id String @id @default(cuid())
+  memberId String @unique
+  status MembershipStatus @default(PENDING)
+  duesCents Int @default(0)
+  expiresAt DateTime
+  member Member @relation(fields: [memberId], references: [id])
+}
+model Event {
+  id String @id @default(cuid())
+  name String
+  description String
+  startsAt DateTime
+  location String
+  capacity Int
+  memberPriceCents Int
+  nonMemberPriceCents Int
+  tickets Ticket[]
+}
+model Ticket {
+  id String @id @default(cuid())
+  code String @unique
+  eventId String
+  memberId String?
+  type TicketType
+  status TicketStatus @default(PAID)
+  priceCents Int
+  event Event @relation(fields: [eventId], references: [id])
+  member Member? @relation(fields: [memberId], references: [id])
+  checkedInAt DateTime?
+  createdAt DateTime @default(now())
+}
+model InventoryItem {
+  id String @id @default(cuid())
+  name String
+  category String
+  size String?
+  priceCents Int
+  stock Int
+  orderLines MerchandiseOrderLine[]
+}
+model MerchandiseOrder {
+  id String @id @default(cuid())
+  memberId String?
+  status OrderStatus @default(PENDING)
+  totalCents Int
+  member Member? @relation(fields: [memberId], references: [id])
+  lines MerchandiseOrderLine[]
+  createdAt DateTime @default(now())
+}
+model MerchandiseOrderLine {
+  id String @id @default(cuid())
+  orderId String
+  itemId String
+  quantity Int
+  unitPriceCents Int
+  order MerchandiseOrder @relation(fields: [orderId], references: [id])
+  item InventoryItem @relation(fields: [itemId], references: [id])
+}
+model Task {
+  id String @id @default(cuid())
+  title String
+  description String?
+  status TaskStatus @default(TODO)
+  dueAt DateTime?
+  assigneeId String?
+  assignee Member? @relation(fields: [assigneeId], references: [id])
+}
+model Transaction {
+  id String @id @default(cuid())
+  type TransactionType
+  category TransactionCategory
+  description String
+  amountCents Int
+  memberId String?
+  receiptUrl String?
+  status String @default("posted")
+  member Member? @relation(fields: [memberId], references: [id])
+  createdAt DateTime @default(now())
+}
+model Announcement {
+  id String @id @default(cuid())
+  title String
+  body String
+  audience String @default("All members")
+  publishedAt DateTime @default(now())
+}

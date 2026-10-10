@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.next-*/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+skyline/src/generated/prisma/

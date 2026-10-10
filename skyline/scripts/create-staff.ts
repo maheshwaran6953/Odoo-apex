@@ -32,6 +32,11 @@ async function main() {
       email,
       passwordHash: hashPassword(password),
       role: "STAFF",
+      requestedRole: "STAFF",
+      approvalStatus: "APPROVED",
+      isRoleApprover: true,
+      approvedAt: new Date(),
+      approvalReason: "Initial administrative bootstrap",
       emailVerifiedAt: new Date(),
     },
   });

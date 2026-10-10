@@ -22,6 +22,10 @@ const models = [
   "emailMessage",
   "payment",
   "paymentWebhook",
+  "session",
+  "accountToken",
+  "loginAttempt",
+  "emailOtp",
 ];
 const dateFields = [
   "createdAt",
@@ -45,6 +49,10 @@ const dateFields = [
   "refundedAt",
   "lastCheckedAt",
   "processedAt",
+  "approvedAt",
+  "reviewedAt",
+  "requestedAt",
+  "windowStartedAt",
 ];
 async function main() {
   const [command, requestedPath] = process.argv.slice(2);
@@ -77,7 +85,17 @@ async function main() {
         "Import must run against the target PostgreSQL database.",
       );
     const snapshot = JSON.parse(readFileSync(file, "utf8"));
-    if (snapshot.version === 1) { snapshot.tables.payment = []; snapshot.tables.paymentWebhook = []; }
+    for (const optional of [
+      "session",
+      "accountToken",
+      "loginAttempt",
+      "emailOtp",
+    ])
+      snapshot.tables[optional] ??= [];
+    if (snapshot.version === 1) {
+      snapshot.tables.payment = [];
+      snapshot.tables.paymentWebhook = [];
+    }
     if (
       ![1, 2].includes(snapshot.version) ||
       models.some((model) => !Array.isArray(snapshot.tables?.[model]))
@@ -105,7 +123,7 @@ async function main() {
       { timeout: 120000 },
     );
     console.log(
-      "Records imported with IDs and relationships preserved. Sessions and verification/reset tokens were intentionally not transferred; users must sign in again.",
+      "Records imported with IDs and relationships preserved. This private transfer includes session and verification records; protect the snapshot and revoke sessions when restoring outside the same trusted environment.",
     );
   } else throw new Error("Use npm run db:export or npm run db:import.");
 }

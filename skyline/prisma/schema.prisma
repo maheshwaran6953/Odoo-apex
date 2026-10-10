@@ -121,6 +121,12 @@ model User {
   email String @unique
   passwordHash String
   role String @default("MEMBER")
+  requestedRole String @default("MEMBER")
+  approvalStatus String @default("PENDING")
+  isRoleApprover Boolean @default(false)
+  approvedById String?
+  approvedAt DateTime?
+  approvalReason String?
   memberId String? @unique
   member Member? @relation(fields: [memberId], references: [id])
   emailVerifiedAt DateTime?
@@ -243,6 +249,7 @@ model InventoryItem {
   orderLines MerchandiseOrderLine[]
 }
 model MerchandiseOrder {
+  userId String?
   id String @id @default(cuid())
   memberId String?
   status OrderStatus @default(PENDING)
@@ -270,6 +277,10 @@ model Task {
   assignee Member? @relation(fields: [assigneeId], references: [id])
 }
 model Transaction {
+  claimantId String?
+  reviewedById String?
+  reviewedAt DateTime?
+  decisionReason String?
   id String @id @default(cuid())
   type TransactionType
   category TransactionCategory
@@ -288,4 +299,15 @@ model Announcement {
   body String
   audience String @default("All members")
   publishedAt DateTime @default(now())
+}
+
+model EmailOtp {
+ id String @id @default(cuid())
+ userId String @unique
+ digest String
+ expiresAt DateTime
+ attempts Int @default(0)
+ requestedAt DateTime @default(now())
+ requestCount Int @default(1)
+ windowStartedAt DateTime @default(now())
 }

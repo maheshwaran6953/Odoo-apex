@@ -1,5 +1,9 @@
 # Database and deployment notes
 
+For the current account, event, waitlist, reminder and Supabase setup, use
+`EVENTS_AND_SUPABASE.md`. The active database remains SQLite until PostgreSQL
+credentials are configured. Do not replace an existing `.env` or reseed club records.
+
 ## Fresh local checkout
 
 Use Node.js 20 or newer with npm. From the repository root:
@@ -39,8 +43,9 @@ These are local release checks. Public hosting and deployment are not complete.
 
 SQLite is a local file. A release must use persistent, writable storage shared
 appropriately by the app, or migrate to a hosted database. An ephemeral filesystem
-will not preserve club records reliably. The existing prototype also needs real
-identity and stricter record ownership before handling real users.
+will not preserve club records reliably. The updated app has account identity and
+ticket ownership checks. Hosted service configuration, PostgreSQL verification
+and deployment hardening remain required.
 
 ## Isolate development and build output
 
@@ -65,5 +70,6 @@ Remove-Item Env:SKYLINE_DIST_DIR
 - Set the deployment database URL and provision durable storage and backups.
 - Initialize schema using a controlled setup process; do not reseed production.
 - Verify role/login behavior, event booking, stock updates, and financial balances.
-- Replace practice role switching before exposing real member information.
+- Practice role switching has been replaced by account sign-in. Bootstrap the
+  first Staff account privately and verify deployment access controls.
 - Clearly retain simulated-payment labels unless payment settlement is implemented.

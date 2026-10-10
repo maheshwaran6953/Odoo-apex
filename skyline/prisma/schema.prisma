@@ -58,6 +58,7 @@ model Member {
   transactions Transaction[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user User?
 }
 model Membership {
   id String @id @default(cuid())
@@ -77,6 +78,12 @@ model Event {
   memberPriceCents Int
   nonMemberPriceCents Int
   tickets Ticket[]
+  registrationClosesAt DateTime?
+  organizerEmail String?
+  schedule String @default("")
+  cancelledAt DateTime?
+  version Int @default(0)
+  waitlist WaitlistEntry[]
 }
 model Ticket {
   id String @id @default(cuid())
@@ -89,6 +96,98 @@ model Ticket {
   event Event @relation(fields: [eventId], references: [id])
   member Member? @relation(fields: [memberId], references: [id])
   checkedInAt DateTime?
+  createdAt DateTime @default(now())
+  userId String?
+  user User? @relation(fields: [userId], references: [id])
+  attendeeName String @default("")
+  attendeeEmail String @default("")
+  attendeePhone String?
+  qrToken String? @unique
+  cancelledAt DateTime?
+  reminderAt DateTime?
+  ledgerId String? @unique
+  @@unique([eventId, userId])
+}
+
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  passwordHash String
+  role String @default("MEMBER")
+  memberId String? @unique
+  member Member? @relation(fields: [memberId], references: [id])
+  emailVerifiedAt DateTime?
+  disabledAt DateTime?
+  emailReminders Boolean @default(true)
+  createdAt DateTime @default(now())
+  sessions Session[]
+  tickets Ticket[]
+  waitlist WaitlistEntry[]
+  notifications Notification[]
+  tokens AccountToken[]
+}
+
+model Session {
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+model AccountToken {
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind String
+  expiresAt DateTime
+}
+
+model LoginAttempt {
+  id String @id
+  failures Int @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model WaitlistEntry {
+  id String @id @default(cuid())
+  eventId String
+  event Event @relation(fields: [eventId], references: [id])
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  status String @default("WAITING")
+  createdAt DateTime @default(now())
+  offeredAt DateTime?
+  offerExpiresAt DateTime?
+  @@unique([eventId, userId])
+  @@index([eventId, status, createdAt])
+}
+
+model Notification {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key String @unique
+  title String
+  body String
+  href String
+  readAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+model EmailMessage {
+  id String @id @default(cuid())
+  key String @unique
+  to String
+  subject String
+  body String
+  status String @default("QUEUED")
+  attempts Int @default(0)
+  lastError String?
+  sentAt DateTime?
+  claimedAt DateTime?
+  providerId String?
   createdAt DateTime @default(now())
 }
 model InventoryItem {

@@ -1,80 +1,76 @@
 # Skyline Student Organization System
 
-## Local setup
+Members, events, merchandise, volunteer work, and club finances in one workspace.
+The interface uses the existing Skyline glass-panel design on desktop and phones.
 
-Requirements: Node 20+, npm, and SQLite through Prisma.
+## Run the application
 
-    Copy-Item .env.example .env
-    npm ci
-    npm run db:push
-    npm run db:seed
-    npm run dev
-
-Open http://localhost:3000.
-
-The database is SQLite, accessed through Prisma. With the example configuration,
-records live in `prisma/dev.db`. Each checkout has its own database file. `npm ci`
-generates the standard `@prisma/client`; if installation scripts were disabled,
-run `npm run db:generate` before starting or seeding. The seed command deletes
-existing records: skip it when keeping an existing club database.
-
-The production build and local startup were verified on 10 October 2026. To run
-the production app after local database setup:
+Use Node.js 20+ and npm. From this folder in PowerShell:
 
 ```powershell
-$env:SKYLINE_DIST_DIR = '.next-build'
-npm run build
-# Only if the build succeeds:
-npm start
-```
-
-Public deployment is still pending. SQLite needs persistent writable storage.
-
-The prototype uses demo data and simulated payments. Do not add real credentials. The main build contract is in ../docs/SKYLINE_VIBE_CODING_SPEC.md.
-
-## Useful checks
-
-    npm run typecheck
-    npm run build
-
-The current vertical slice includes the dashboard, membership activation, merchandise stock, event ticketing, check-in, fundraiser tasks, treasurer ledger, and announcements.
-
-## Club workspace UI
-
-The app now shares a glass-panel layout, desktop sidebar, phone navigation drawer,
-clear action feedback, and a consistent Skyline visual identity across all routes.
-Dashboard figures come from the database; no static live counters are displayed.
-
-- **Member desk:** browse members and tasks, book future events, order merchandise,
-  read updates, and submit reimbursement requests.
-- **Staff desk:** add members, record dues, create events, check tickets, assign
-  volunteer tasks, change task status, and publish notices.
-- **Treasurer desk:** record member dues, review the complete ledger, approve pending
-  reimbursements, and publish notices.
-
-Choose a practice role at `/login`. `Leave desk` clears the role and returns there.
-This is a practice role switcher, not production authentication. Orders and tickets
-record local payments only. Camera scanning, card charging, and email delivery
-are not connected.
-
-Members can be searched by name/email and filtered by membership status. Recording
-dues activates membership for one year, with duplicate active dues rejected.
-Merchandise sizes have independent stock, and changing quantity updates the shown
-total. Ticket codes appear after booking and cannot be checked in twice. Expenses
-stay pending until the treasurer approves them; only posted expenses affect cash.
-
-Older events remain visible but cannot accept new bookings. To make an upcoming
-event, switch to Staff, open Events & tickets, and expand “Put an event on the
-calendar.” Existing database records do not need to be reset.
-
-For an isolated preview without sharing the running app's build directory, use
-PowerShell from this folder:
-
-```powershell
-$env:SKYLINE_DIST_DIR = '.next-preview'
+Copy-Item .env.example .env # Only if .env does not already exist
+npm ci
+npm run db:push
 npm run dev -- --port 3001
 ```
 
-Use `.next-build` instead when verifying a build separately. Run `npm start` with
-the same `SKYLINE_DIST_DIR` used for that build. Clear the override using
-`Remove-Item Env:SKYLINE_DIST_DIR` to return to the default `.next` directory.
+Open http://localhost:3001/events. Do not seed an existing club database. Stop this
+checkout's running app before regenerating Prisma on Windows to avoid DLL locks.
+`npm run db:seed` is optional for a disposable empty database and is blocked after
+accounts exist. It deletes existing club sample records.
+
+## Accounts and staff setup
+
+The old practice role switcher has been replaced by account sign-in. New accounts
+start as Member. Booking and waitlists require email verification or explicit staff
+identity confirmation. Paid club membership is separate from account registration.
+
+Configure BOOTSTRAP_EMAIL, BOOTSTRAP_NAME and BOOTSTRAP_PASSWORD privately in `.env`,
+then run `npm run account:bootstrap` once to create the first Staff account. Use a
+unique password of at least 12 characters and remove it from `.env` afterward.
+Staff assigns other roles and confirms identities at `/admin/users`.
+
+## Events, tickets and reminders
+
+- `/events`: public discovery, filters, dates, availability and event details.
+- `/my-events`: your registrations, waitlist positions and offered seats.
+- `/tickets/[ticketId]`: private QR ticket, download, print and cancellation.
+- `/events/[eventId]/manage`: Staff attendee list, CSV, attendance and event editing.
+- `/events/check-in`: selected-event QR/camera or manual-code verification.
+- `/notifications`: your saved changes, seat offers and reminders.
+- `/account`: verification, email preferences and reimbursement submission.
+
+Run `npm run events:watch` in a separate terminal for reminders and offer expiry
+processing every five minutes. Staff can also trigger jobs manually. Email remains
+queued until RESEND_API_KEY and EMAIL_FROM are configured. Camera scanning requires
+HTTPS or localhost. Event views refresh every 20 seconds while visible.
+
+Payments are simulated. Confirmed registration and ledger income do not mean a
+card was charged. Cancellation revokes tickets and voids linked simulated income;
+it does not transfer a refund.
+
+## Database and Supabase
+
+The active local database is SQLite (`prisma/dev.db` by default), accessed through
+Prisma 6.19.3. Supabase PostgreSQL support and safe export/import scripts are ready,
+but hosted migration awaits private connection strings. The project URL alone does
+not grant database access. Each SQLite checkout has its own records.
+
+Read [the complete setup and event guide](../docs/EVENTS_AND_SUPABASE.md) before
+changing providers. It covers backups, staff bootstrap, migration, server-only table
+access, email configuration, scheduler setup and the remaining deployment boundaries.
+
+## Release commands
+
+```powershell
+npm run db:validate
+npm run typecheck
+$env:SKYLINE_DIST_DIR = '.next-build'
+npm run build
+# Only after a successful build, in the same terminal:
+npm start -- --port 3001
+```
+
+Use the same SKYLINE_DIST_DIR for build and start. `npm run verify` runs schema,
+TypeScript and build checks in an isolated output directory. Public deployment and
+actual email delivery remain unverified until their services are configured.

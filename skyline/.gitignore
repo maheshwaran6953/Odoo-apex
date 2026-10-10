@@ -5,3 +5,6 @@ node_modules/
 *.tsbuildinfo
 prisma/*.db
 prisma/*.db-journal
+backups/
+prisma/schema.postgresql.generated.prisma
+prisma/server-only.generated.sql

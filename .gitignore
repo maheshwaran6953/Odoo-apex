@@ -10,3 +10,6 @@ node_modules/
 *.db-wal
 *.db-shm
 skyline/src/generated/prisma/
+skyline/prisma/schema.postgresql.generated.prisma
+skyline/backups/
+skyline/prisma/server-only.generated.sql

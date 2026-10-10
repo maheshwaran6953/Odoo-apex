@@ -3,6 +3,19 @@ import { db } from "@/lib/db";
 import { newToken } from "@/lib/password";
 
 export type EventTx = Prisma.TransactionClient;
+export const CHECKOUT_HOLD_STATES = ["INIT", "CREATING", "PENDING"];
+export async function paymentHoldCount(tx: EventTx, eventId: string) {
+  return tx.payment.count({ where: { eventId, status: { in: CHECKOUT_HOLD_STATES }, expiresAt: { gt: new Date() } } });
+}
+export async function expirePaymentHolds(tx: EventTx, eventId: string) {
+  const now = new Date();
+  const expired = await tx.payment.findMany({ where: { eventId, status: { in: CHECKOUT_HOLD_STATES }, expiresAt: { lte: now } } });
+  for (const payment of expired) {
+    await tx.payment.update({ where: { id: payment.id }, data: { status: "EXPIRED", issue: "Seat hold expired. A later captured payment requires staff review." } });
+    const entry = await tx.waitlistEntry.findUnique({ where: { eventId_userId: { eventId, userId: payment.userId } } });
+    if (entry?.status === "PAYMENT_PENDING") await tx.waitlistEntry.update({ where: { id: entry.id }, data: { status: entry.offerExpiresAt && entry.offerExpiresAt > now ? "OFFERED" : "EXPIRED" } });
+  }
+}
 export async function eventTransaction<T>(
   eventId: string,
   fn: (tx: EventTx) => Promise<T>,
@@ -82,6 +95,7 @@ export async function notify(
 }
 
 export async function promoteWaitlist(tx: EventTx, eventId: string) {
+  await expirePaymentHolds(tx, eventId);
   const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
   const now = new Date();
   const expired = await tx.waitlistEntry.findMany({
@@ -114,7 +128,7 @@ export async function promoteWaitlist(tx: EventTx, eventId: string) {
   const offers = await tx.waitlistEntry.count({
     where: { eventId, status: "OFFERED", offerExpiresAt: { gt: now } },
   });
-  const count = Math.max(0, event.capacity - registered - offers);
+  const count = Math.max(0, event.capacity - registered - offers - await paymentHoldCount(tx, eventId));
   const next = await tx.waitlistEntry.findMany({
     where: { eventId, status: "WAITING" },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -159,6 +173,7 @@ export async function registerAttendee(
 ) {
   await promoteWaitlist(tx, eventId);
   const event = await tx.event.findUniqueOrThrow({ where: { id: eventId } });
+  if (event.paymentMode !== "PRACTICE") throw new Error("This event requires verified Razorpay Test Mode checkout. Practice registration cannot bypass payment.");
   if (!bookingOpen(event))
     throw new Error("Registration is closed for this event.");
   const user = await tx.user.findUniqueOrThrow({
@@ -189,7 +204,7 @@ export async function registerAttendee(
     own?.status === "OFFERED" &&
     !!own.offerExpiresAt &&
     own.offerExpiresAt > new Date();
-  if (registered + reserved - (hasOffer ? 1 : 0) >= event.capacity)
+  if (registered + reserved + await paymentHoldCount(tx, eventId) - (hasOffer ? 1 : 0) >= event.capacity)
     throw new Error("No seats are available. Join the waitlist instead.");
   const membership = user.member?.membership;
   const isMember =
@@ -210,6 +225,8 @@ export async function registerAttendee(
     cancelledAt: null,
     checkedInAt: null,
     reminderAt: null,
+    currency: event.currency,
+    paymentMode: "PRACTICE",
   };
   const ledger = await tx.transaction.create({
     data: {
@@ -218,6 +235,7 @@ export async function registerAttendee(
       description: `${event.name} registration — simulated payment`,
       amountCents: ticketData.priceCents,
       memberId: user.memberId,
+      currency: event.currency,
     },
   });
   const ticket = previous

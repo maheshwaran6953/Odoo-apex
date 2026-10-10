@@ -63,11 +63,11 @@ npm run events:watch
 
 Keep it running only while required; Ctrl+C stops it. Running the app alone does not imply unattended reminder processing. Email configuration is deliberately deferred. In-app notifications still work.
 
-## Deferred OTP email activation
+## OTP email activation
 
 OTP logic is implemented and tested with isolated fixtures; real inbox delivery is NOT verified. EMAIL_VERIFICATION_ENABLED=false prevents code issuance/delivery claims. New registrations remain unverified and cannot access protected club operations until email delivery is enabled and verification completes. Initial accounts were administratively bootstrapped, not OTP-verified.
 
-When ready: configure a legitimate sending provider, RESEND_API_KEY and EMAIL_FROM as applicable; keep the private OTP_SECRET (at least32 characters); verify sender/provider delivery; set EMAIL_VERIFICATION_ENABLED=true; restart server and worker; test registration, inbox delivery, OTP verification, pending role approval and approved login. Do not print OTPs or bypass verification to simulate success.
+See EMAIL_VERIFICATION.md for Gmail SMTP without a custom domain. Run npm run email:check after adding the App Password locally. Alternatively configure a verified-domain Resend provider; keep the private OTP_SECRET (at least32 characters); verify sender/provider delivery; set EMAIL_VERIFICATION_ENABLED=true; restart server and worker; test registration, inbox delivery, OTP verification, pending role approval and approved login. Do not print OTPs or bypass verification to simulate success.
 
 ## Code checks
 

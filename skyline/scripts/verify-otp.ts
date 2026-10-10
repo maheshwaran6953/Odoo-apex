@@ -10,6 +10,7 @@ async function main() {
   loadEnvConfig(process.cwd());
   process.env.OTP_SECRET = randomBytes(32).toString("hex");
   process.env.EMAIL_VERIFICATION_ENABLED = "true";
+  process.env.EMAIL_PROVIDER = "resend";
   process.env.RESEND_API_KEY = "fixture-no-network";
   process.env.EMAIL_FROM = "fixture@skyline.example";
   // No worker or provider is invoked. Test codes are read only from isolated fixture outbox rows.

@@ -16,3 +16,5 @@ Real email deferred; framework dependency advisories remain release blockers. Pa
 Browser checks: initial Member login -> My events with no registrations; Member finance route denied; designated Staff login -> Overview with honest empty totals and access to role review screen. Treasurer browser verification follows.
 
 Treasurer initial login -> Treasurer desk with zero ledger entries; Treasurer User access route denied. All three initial browser logins verified.
+
+Email implementation update: encrypted SMTP adapter, immediate account-specific OTP dispatch, safe SMTP uncertainty handling and outbox-code cleanup implemented. OTP and simulated-delivery suites pass with scoped cleanup. Actual SMTP authentication/inbox verification pending App Password.

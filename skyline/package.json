@@ -23,7 +23,9 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"scripts/*.{ts,mjs}\" \"*.{json,mjs}\" --ignore-unknown",
     "verify:otp": "tsx scripts/verify-otp.ts --temporary-fixtures",
     "verify:events": "tsx scripts/verify-events.ts --temporary-fixtures",
-    "verify:finance": "tsx scripts/verify-finance.ts --temporary-fixtures"
+    "verify:finance": "tsx scripts/verify-finance.ts --temporary-fixtures",
+    "email:check": "tsx scripts/check-email.ts",
+    "verify:email": "tsx scripts/verify-email-delivery.ts --temporary-fixtures"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -33,6 +35,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
     "next": "^14.2.30",
+    "nodemailer": "^10.1.0",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -41,6 +44,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",

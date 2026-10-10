@@ -1,0 +1,62 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { useClubFeedback } from './feedback';
+
+type Result = { ok: boolean; message: string; code?: string };
+type Props = {
+  action: (data: FormData) => Promise<Result>;
+  children: React.ReactNode;
+  className?: string;
+};
+
+export function ActionForm({ action, children, className = '' }: Props) {
+  const [pending, setPending] = useState(false);
+  const [result, setResult] = useState<Result | null>(null);
+  const router = useRouter();
+  const notify = useClubFeedback();
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending) return;
+    const data = new FormData(event.currentTarget);
+    // datetime-local values have no timezone; convert using the attendee's browser.
+    const startsAt = data.get('startsAt');
+    if (typeof startsAt === 'string' && startsAt) {
+      const parsed = new Date(startsAt);
+      if (Number.isFinite(parsed.getTime())) data.set('startsAt', parsed.toISOString());
+    }
+    setPending(true);
+    setResult(null);
+    try {
+      const response = await action(data);
+      setResult(response);
+      if (response.ok) {
+        notify(response);
+        router.refresh();
+      }
+    } catch (error) {
+      setResult({ ok: false, message: error instanceof Error ? error.message : 'Something went wrong. Please try again.' });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <form className={className} onSubmit={submit} aria-busy={pending}>
+      <fieldset disabled={pending} className="action-fields">{children}</fieldset>
+      {pending && <p className="form-feedback" role="status"><Loader2 size={16} className="animate-spin" />Saving your changes…</p>}
+      {result && (
+        <div className={`form-feedback ${result.ok ? 'success' : 'failure'}`} role={result.ok ? 'status' : 'alert'}>
+          {result.ok ? <CheckCircle2 size={17} /> : <AlertCircle size={17} />}
+          <div>
+            {result.message}
+            {result.code && <><p className="mt-2 text-xs">Your entry code · save this for the door</p><strong className="ticket-code">{result.code}</strong></>}
+          </div>
+        </div>
+      )}
+    </form>
+  );
+}

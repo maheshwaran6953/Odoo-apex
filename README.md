@@ -137,3 +137,16 @@ The system will provide a single platform to address these problems.
 ## 🎯 Project Goal
 
 Build a simple, reliable, and centralized system that enables the Skyline Student Association to manage its entire semester—from onboarding new members to organizing events and closing the books—without depending on scattered spreadsheets, notebooks, and group chats.
+
+## Implemented practice application
+
+The current implementation is in [`skyline/`](skyline/README.md). Read
+[`docs/PROJECT_WALKTHROUGH.md`](docs/PROJECT_WALKTHROUGH.md) for a beginner-friendly
+explanation of the club workflows, implemented features, and remaining work.
+[`docs/VERIFICATION.md`](docs/VERIFICATION.md) separates completed checks from
+unverified scenarios and the current production build blocker.
+
+The features listed above describe the product's intended scope. The current
+application uses practice role switching and simulated payment records, with local
+SQLite persistence. It does not yet provide production authentication, actual
+payment collection, email delivery, receipt uploads, or a verified live deployment.

@@ -74,7 +74,7 @@ export default async function MembersPage() {
                   type="number"
                   min="0.01"
                   step="0.01"
-                  defaultValue="12.00"
+                  max="100000"
                   required
                 />
               </label>

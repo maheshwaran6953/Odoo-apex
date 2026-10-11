@@ -2,7 +2,7 @@ import { ExpenseAccountSection } from "@/components/club/expense-section";
 import { requireUser } from "@/server/auth";
 import { updateAccount, resendVerification } from "@/server/actions/auth";
 import { ActionForm } from "@/components/club/action-form";
-import { PageHeading } from "@/components/club/ui";
+import { PageHeading, date } from "@/components/club/ui";
 export default async function AccountPage() {
   const user = await requireUser();
   return (
@@ -35,7 +35,9 @@ export default async function AccountPage() {
             <div>
               <dt className="subtext">Linked membership</dt>
               <dd>
-                {user.member?.membership?.status || "No membership linked"}
+                {user.member?.membership
+                  ? `${user.member.membership.status === "ACTIVE" && user.member.membership.expiresAt <= new Date() ? "EXPIRED" : user.member.membership.status} · valid until ${date(user.member.membership.expiresAt)}`
+                  : "Dues not configured"}
               </dd>
             </div>
           </dl>
@@ -57,7 +59,7 @@ export default async function AccountPage() {
           </a>
         </section>
         <section className="glass-panel panel h-fit">
-          <h2 className="section-title mb-5">Event reminders</h2>
+          <h2 className="section-title mb-5">Email updates</h2>
           <ActionForm action={updateAccount}>
             <label className="flex gap-3 text-sm mb-4">
               <input
@@ -66,7 +68,8 @@ export default async function AccountPage() {
                 defaultChecked={user.emailReminders}
               />
               <span>
-                Email me event reminders, seat offers, and registration updates
+                Email me event reminders, seat offers, membership renewals and
+                club notices
               </span>
             </label>
             <p className="subtext mb-5">

@@ -9,20 +9,27 @@ type Item = {
   category: string;
   size: string | null;
   priceCents: number;
+  memberPriceCents: number | null;
   stock: number;
 };
 export function ShopProduct({
   items,
   canOrder,
+  eligibleForDiscount,
 }: {
   items: Item[];
   canOrder: boolean;
+  eligibleForDiscount: boolean;
 }) {
   const [selected, setSelected] = useState(
     items.find((i) => i.stock > 0)?.id ?? items[0].id,
   );
   const [quantity, setQuantity] = useState(1);
   const item = items.find((i) => i.id === selected) ?? items[0];
+  const priceCents =
+    eligibleForDiscount && item.memberPriceCents !== null
+      ? item.memberPriceCents
+      : item.priceCents;
   const hoodie = item.category.toLowerCase().includes("hood");
   return (
     <article className="glass-panel panel">
@@ -89,16 +96,21 @@ export function ShopProduct({
       <div className="flex justify-between items-start gap-4 mt-5">
         <div>
           <h2 className="section-title">{item.name}</h2>
-          <p className="subtext mt-1">
-            {hoodie
-              ? "The campus staple. Forest green, club lettering."
-              : "Easy everyday wear. Cream with club lettering."}
-          </p>
+          <p className="subtext mt-1">{item.category}</p>
         </div>
         <strong className="text-lg whitespace-nowrap">
-          {money(item.priceCents)}
+          {money(priceCents)}
         </strong>
       </div>
+      {item.memberPriceCents !== null && (
+        <p className="subtext mt-2">
+          Active member price {money(item.memberPriceCents)} · regular{" "}
+          {money(item.priceCents)}.{" "}
+          {eligibleForDiscount
+            ? "Your membership discount applies."
+            : "An active, unexpired membership is required."}
+        </p>
+      )}
       <ActionForm action={createMerchandiseOrder} className="mt-5">
         <input type="hidden" name="itemId" value={item.id} />
         <div className="grid grid-cols-[1fr_90px] gap-3">
@@ -127,7 +139,7 @@ export function ShopProduct({
               name="quantity"
               type="number"
               min="1"
-              max={Math.max(item.stock, 1)}
+              max={Math.max(Math.min(item.stock, 10), 1)}
               required
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
@@ -145,7 +157,7 @@ export function ShopProduct({
                 : "In stock"}
           </span>
           <span className="subtext">
-            Total <strong>{money(item.priceCents * quantity)}</strong>
+            Total <strong>{money(priceCents * quantity)}</strong>
           </span>
         </div>
         <button

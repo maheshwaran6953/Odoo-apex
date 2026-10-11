@@ -1,7 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { financeSummary } from "@/server/finance-service";
 import { db } from "@/lib/db";
 import { requireRole, requireUser } from "@/server/auth";
-import { approveExpense, rejectExpense } from "@/server/actions/treasurer";
+import {
+  approveExpense,
+  rejectExpense,
+  createFundraiserIncome,
+} from "@/server/actions/treasurer";
 import { ActionForm } from "@/components/club/action-form";
 import { ExpenseForm } from "@/components/club/expense-section";
 import { PageHeading, Stat, money, date, Empty } from "@/components/club/ui";
@@ -123,6 +128,16 @@ export default async function TreasurerPage() {
                               : "Not recorded"}
                           </p>
                         )}
+                        {t.receiptUrl && (
+                          <a
+                            className="section-link block mt-2"
+                            href={t.receiptUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Open receipt
+                          </a>
+                        )}
                         {reviewable &&
                           t.claimantId &&
                           t.claimantId !== user.id && (
@@ -209,6 +224,46 @@ export default async function TreasurerPage() {
             Keep your receipt for review. You cannot approve your own request.
           </p>
           <ExpenseForm />
+          <h2 className="section-title mt-6 mb-3">
+            Record fundraiser receipts
+          </h2>
+          <ActionForm action={createFundraiserIncome}>
+            <input type="hidden" name="requestKey" value={randomUUID()} />
+            <label className="field">
+              <span>Fundraiser / receipt description</span>
+              <input
+                className="input"
+                name="description"
+                minLength={3}
+                maxLength={200}
+                required
+              />
+            </label>
+            <label className="field">
+              <span>Currency</span>
+              <select className="input" name="currency" required>
+                <option value="USD">USD</option>
+                <option value="INR">INR</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Amount already received</span>
+              <input
+                className="input"
+                type="number"
+                name="amount"
+                min="0.01"
+                max="100000"
+                step="0.01"
+                required
+              />
+            </label>
+            <button className="button">Record income</button>
+            <p className="subtext">
+              Record actual receipts received separately. This form does not
+              collect payment.
+            </p>
+          </ActionForm>
         </section>
       </div>
     </main>

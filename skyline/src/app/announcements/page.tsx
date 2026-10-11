@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import { currentRole } from "@/server/auth";
 import { publishAnnouncement } from "@/server/actions/announcements";
@@ -57,6 +58,7 @@ export default async function AnnouncementsPage() {
                 A useful update beats another buried group-chat message.
               </p>
               <ActionForm action={publishAnnouncement}>
+                <input type="hidden" name="requestKey" value={randomUUID()} />
                 <label className="field">
                   <span>Title</span>
                   <input
@@ -84,8 +86,9 @@ export default async function AnnouncementsPage() {
                 </button>
               </ActionForm>
               <p className="subtext mt-4">
-                Visible to everyone in the workspace. Email delivery is not
-                connected.
+                Approved club accounts receive an in-app update. Email is queued
+                for accounts with email updates enabled; keep the background
+                worker running.
               </p>
             </>
           )}

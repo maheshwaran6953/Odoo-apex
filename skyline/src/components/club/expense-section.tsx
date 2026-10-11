@@ -36,6 +36,19 @@ export function ExpenseForm() {
           required
         />
       </label>
+      <label className="field">
+        <span>Receipt link (optional HTTPS URL)</span>
+        <input
+          className="input"
+          name="receiptUrl"
+          type="url"
+          maxLength={2000}
+          pattern="https://.*"
+        />
+        <small className="subtext">
+          Use a link the reviewer can access. File uploads are not provided.
+        </small>
+      </label>
       <button className="button">Submit for review</button>
       <p className="subtext mt-3">
         Pending and rejected requests do not affect the ledger. Approval records
@@ -80,7 +93,19 @@ export async function ExpenseAccountSection({ userId }: { userId: string }) {
             <tbody>
               {requests.map((request) => (
                 <tr key={request.id}>
-                  <td>{request.description}</td>
+                  <td>
+                    {request.description}
+                    {request.receiptUrl && (
+                      <a
+                        className="section-link block mt-1"
+                        href={request.receiptUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open receipt
+                      </a>
+                    )}
+                  </td>
                   <td>{date(request.createdAt)}</td>
                   <td>{money(request.amountCents, request.currency)}</td>
                   <td>

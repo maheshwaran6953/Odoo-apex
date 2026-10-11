@@ -1,389 +1,251 @@
-> Current repair/setup instructions: [Local runbook](docs/LOCAL_RUNBOOK.md). Old review/demo data was removed. Do not run demo seed. New accounts require OTP verification and designated Staff approval; real OTP email delivery is currently deferred.
+# Skyline Student Organization System
 
-<div align="center">
+Skyline is a campus club workspace for memberships, events, QR tickets, merchandise, volunteer tasks, announcements and finances. It replaces scattered spreadsheets, notebooks and group messages with persistent records and role-controlled workflows.
 
-# 🏛️ Skyline Student Association
-### 🎓 Student Organization System
+This repository contains the **Student Organization System**, not LoomFlow. The application is in [`skyline/`](skyline/). Updated: **11 October 2026**.
 
-*A unified platform to manage student memberships, events, ticket sales, merchandise, announcements, volunteer tasks, and finances in one place.*
+## Actual technology stack
 
-[![Status](https://img.shields.io/badge/Status-Active%20Application-blue?style=for-the-badge&logo=github)](docs/VERIFICATION.md)
-[![Database](https://img.shields.io/badge/Database-Supabase%20%2F%20PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](#-technology-stack)
-[![Scope](https://img.shields.io/badge/Scope-Campus%20Club%20ERP-purple?style=for-the-badge)](#-core-features)
-[![Docs](https://img.shields.io/badge/Docs-Walkthrough-success?style=for-the-badge&logo=readme)](docs/PROJECT_WALKTHROUGH.md)
+Versions below are resolved in [`skyline/package-lock.json`](skyline/package-lock.json), rather than the wider version ranges in package.json.
 
----
+| Layer                    | Current implementation                                      | Responsibility                                                                               |
+| ------------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Application framework    | **Next.js 14.2.35**, App Router                             | Routing, layouts, server rendering and the application server                                |
+| Frontend                 | **React 18.3.1**, **TypeScript 5.9.3**                      | Typed pages, forms and interactive components                                                |
+| Styling                  | **Tailwind CSS 3.4.19**, custom CSS                         | Responsive glass panels, desktop top navigation and mobile bottom navigation                 |
+| Icons and style helpers  | **Lucide React 0.468.0**, CVA, clsx, tailwind-merge         | Icons and reusable component styling                                                         |
+| Backend                  | **Node.js**, Next.js Server Actions and Route Handlers      | Domain rules, mutations, exports and protected job endpoints                                 |
+| Database                 | **Supabase-hosted PostgreSQL**                              | Persistent accounts, memberships, events, tickets, orders, tasks and ledger records          |
+| ORM                      | **Prisma / Prisma Client 6.19.3**                           | Typed queries, transactions and conditional updates                                          |
+| Validation               | **Zod 3.25.76**, shared validation helpers                  | Input bounds, dates, quantities, email and monetary values                                   |
+| Authentication           | Custom database-backed opaque cookie sessions               | Login, session expiry and revocation; session tokens are hashed with SHA-256 in the database |
+| Password protection      | Node.js crypto **scrypt** with random salts                 | Password hashing and verification                                                            |
+| Authorization            | Server-side role, account-state and ownership checks        | MEMBER, STAFF, TREASURER; separate designated Staff approval capability                      |
+| QR generation            | **qrcode.react 4.2.0**                                      | Digital ticket QR display                                                                    |
+| QR scanning              | **@zxing/browser 0.1.5**                                    | Camera-based scanning, with manual ticket-code fallback                                      |
+| Email                    | **Nodemailer 10.1.0**, Gmail SMTP; optional Resend adapter  | OTP, password recovery and queued notices/reminders                                          |
+| Background processing    | **tsx 4.23.15** worker and protected Next.js job endpoint   | Event reminders, membership expiry, waitlist offers and queued email                         |
+| Code quality             | **Prettier 3.9.10**, **ESLint 8.57.1**, TypeScript compiler | Formatting, lint and type checks                                                             |
+| Verification             | Node assert-based integration scripts                       | Scoped temporary fixtures for domain and database behavior                                   |
+| Collaboration            | Git and GitHub                                              | Local commits and shared source history                                                      |
+| Payment integration code | Razorpay **Test Mode only**                                 | Existing event checkout work; development is paused and not a completed live payment system  |
 
-[Overview](#-overview) • [Problem Statement](#-problem-statement) • [Core Features](#-core-features) • [Target Users](#-target-users) • [Architecture](#-system-architecture) • [Workflows](#-typical-user-workflows) • [Setup](#-setup--getting-started)
+The local runtime used for the latest verification is **Node.js v24.14.1**. Install dependencies with `npm ci` to use the committed lockfile.
 
----
+There is **no Python backend, Express server, JWT authentication, Supabase Auth, Odoo runtime, or installed shadcn/ui component library** in the current implementation. Next.js hosts frontend and backend together as a modular monolith. The UI uses custom reusable components. Page refresh/polling where implemented is not a Supabase Realtime subscription.
 
-</div>
+### Why the schema still mentions SQLite
 
-## 📌 Overview
+[`skyline/prisma/schema.prisma`](skyline/prisma/schema.prisma) is the base schema. [`skyline/scripts/database.mjs`](skyline/scripts/database.mjs) selects the provider from private configuration and generates an ignored PostgreSQL schema when `DATABASE_PROVIDER=postgresql`.
 
-The **Skyline Student Association** is a campus club that organizes events, sells memberships and merchandise, and manages a budget funded by membership dues, ticket sales, and fundraisers.
+**The current configured database is Supabase PostgreSQL.** The checked-in `.env.example` defaults to SQLite for a fresh standalone setup; copying it does not reproduce the configured Supabase environment. Use the project's `db:*` commands so Prisma targets the selected provider.
 
-Currently, most operations are handled manually using spreadsheets, notebooks, cash payments, and WhatsApp messages. This leads to missed announcements, financial discrepancies, and difficulty tracking memberships, payments, and expenses.
-
-The **Student Organization System** aims to digitize and centralize these operations, making club management simpler, faster, and more transparent.
-
----
-
-## 🎯 Problem Statement
-
-The association faces several operational challenges:
-
-| Operational Area | Existing Manual Challenge | Digitized Solution |
-| :--- | :--- | :--- |
-| 🪪 **Membership Management** | Member details and dues are tracked in spreadsheets. | Centralized database with automated renewal reminders. |
-| 🎟️ **Event Management** | Tickets are sold manually, making attendance & revenue difficult to track. | Online ticket sales, member discounts & entrance verification. |
-| 📢 **Communication** | Announcements sent individually across multiple WhatsApp groups. | Centralized broadcast hub with historical timestamped logs. |
-| 👕 **Merchandise Sales** | Orders, sizes, payments, and inventory tracked manually. | E-commerce style order tracking with real-time stock updates. |
-| 🤝 **Volunteer Coordination** | Tasks and responsibilities scattered across group chats. | Structured task assignment, deadlines & progress tracking. |
-| 💰 **Financial Management** | Income, expenses & reimbursements recorded in notebooks with loose receipts. | Central ledger with receipt attachments & automated balance calculations. |
-
-The system will provide a single platform to address these problems.
-
----
-
-## ✨ Core Features
-
-<details open>
-<summary><b>1. 🪪 Membership Management</b></summary>
-
-- Register and manage student members.
-- Track membership status and dues payments.
-- Define membership benefits, including discounts on tickets and merchandise.
-- Manage annual membership validity and renewals.
-- Send renewal reminders before memberships expire.
-- Verify membership status during events.
-</details>
-
-<details open>
-<summary><b>2. 🎟️ Event and Ticket Management</b></summary>
-
-- Create and publish events online.
-- Sell tickets with different pricing for members and non-members.
-- Set ticket limits and track remaining availability.
-- Generate digital tickets for attendees.
-- Verify tickets quickly at the event entrance.
-- Track attendance and ticket check-ins.
-- Generate event revenue and attendance reports.
-</details>
-
-<details open>
-<summary><b>3. 📢 Announcements and Communication</b></summary>
-
-- Publish announcements through a centralized website.
-- Maintain a mailing list for members.
-- Send updates about meetings, deadlines, and schedule changes.
-- Keep a history of published announcements with timestamps.
-- Reduce the need to send messages manually across multiple groups.
-</details>
-
-<details open>
-<summary><b>4. 👕 Merchandise Management</b></summary>
-
-- List and sell club merchandise, including hoodies and T-shirts.
-- Collect orders and payments online.
-- Record product sizes and quantities.
-- Track available stock for each product and size.
-- Update inventory as orders are placed.
-- Monitor merchandise sales and revenue.
-</details>
-
-<details open>
-<summary><b>5. 🤝 Volunteer and Task Management</b></summary>
-
-- Create tasks for events and fundraisers.
-- Assign tasks to volunteers.
-- Set deadlines and track task status.
-- View task ownership and progress at a glance.
-- Coordinate activities without relying entirely on group chats.
-- Track fundraiser preparation and completion.
-</details>
-
-<details open>
-<summary><b>6. 💰 Financial Management</b></summary>
-
-- Record income from membership dues, ticket sales, merchandise, and fundraisers.
-- Record expenses incurred by the association.
-- Submit and track volunteer reimbursement requests.
-- Attach receipts to expense records.
-- Track reimbursement status.
-- View total income, total expenses, and available balance.
-- Generate financial summaries for the semester.
-- Maintain transparent financial records for the leadership team.
-</details>
-
----
-
-## 👥 Target Users
-
-| Role | Key Responsibilities & Capabilities |
-| :--- | :--- |
-| 👤 **Members** | Register, renew memberships, purchase tickets, order merchandise, and receive announcements. |
-| 🙋 **Volunteers** | View assigned tasks, manage responsibilities, and submit expense claims. |
-| 🗓️ **Event Organizers** | Create events, manage tickets, and track attendance. |
-| 💼 **Treasurers** | Monitor income, expenses, reimbursements, and the club's balance. |
-| 👑 **Administrators / Club Leaders** | Manage members, events, announcements, merchandise, volunteers, and overall club operations. |
-
----
-
-## 🏛️ System Architecture
-
-```text
-+-----------------------------------------------------------------------------------+
-|                                 USER ROLES & ACCESS                               |
-|   [ Members ]  [ Volunteers ]  [ Event Organizers ]  [ Treasurers ]  [ Leaders ]  |
-+-----------------------------------------------------------------------------------+
-                                         |
-                                         v
-+-----------------------------------------------------------------------------------+
-|                        CENTRALIZED APPLICATION PLATFORM                           |
-|                       (Web Interface & Unified Dashboard)                         |
-|                                                                                   |
-|  +---------------------+  +---------------------+  +---------------------------+  |
-|  |  Membership Engine  |  |  Event & Ticketing  |  |  Communication Hub        |  |
-|  +---------------------+  +---------------------+  +---------------------------+  |
-|  |  Merchandise/Stock  |  |  Task & Volunteers  |  |  Financial Ledger         |  |
-|  +---------------------+  +---------------------+  +---------------------------+  |
-+-----------------------------------------------------------------------------------+
-                                         |
-                                         v
-+-----------------------------------------------------------------------------------+
-|                             DATA & PERSISTENCE LAYER                              |
-|         [( Supabase - PostgreSQL Database )]      [ Receipts & Ticket Files ]     |
-+-----------------------------------------------------------------------------------+
-```
-
-<details>
-<summary><b>View Mermaid Diagram Format</b></summary>
+## Architecture and data flow
 
 ```mermaid
 flowchart TD
-    A["Members"] --> F["Web Interface"]
-    B["Volunteers"] --> F
-    C["Event Organizers"] --> F
-    D["Treasurers"] --> F
-    E["Administrators"] --> F
-
-    F --> G["Membership Engine"]
-    F --> H["Event & Ticketing Engine"]
-    F --> I["Communication Hub"]
-    F --> J["Merchandise Engine"]
-    F --> K["Task Manager"]
-    F --> L["Financial Ledger"]
-
-    G --> M["Supabase (PostgreSQL)"]
-    H --> M
-    I --> M
-    J --> M
-    K --> M
-    L --> M
+    Browser[Browser: React pages and forms] --> Next[Next.js App Router]
+    Next --> Checks[Session, verification, approval, role and ownership checks]
+    Checks --> Services[Domain services and input validation]
+    Services --> Prisma[Prisma queries and transactions]
+    Prisma --> DB[(Supabase PostgreSQL)]
+    Services --> UI[Revalidated pages and in-app feedback]
+    Services --> Outbox[Private notification and email outbox]
+    Worker[Background worker] --> Services
+    Worker --> Outbox
+    Outbox --> Email[Gmail SMTP or configured Resend adapter]
 ```
-</details>
 
----
+React Server Components fetch data on the server. Server Actions validate the signed-in actor and input before changing records. Route Handlers provide attendee CSV/calendar exports, protected jobs and the existing test payment webhook. Database and email credentials stay on the server.
 
-## 🔄 Typical User Workflows
+## Implemented club workflows
 
-### 1. New Member Registration
-1. A student registers for membership.
-2. The system records their details and payment status.
-3. Membership benefits become available once eligibility requirements are met.
-4. The system tracks the membership expiry date and sends renewal reminders.
+Business records are entered through the application and stored in the database. Empty views remain empty until records are created; startup does not populate demo events, products or transactions.
+
+| Module            | Functioning behavior                                                                                                                      | Important boundary                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Accounts          | Registration with requested role, login/logout, OTP verification logic, recovery flows, account preferences and designated Staff approval | New users need verified email and approval; real OTP inbox delivery still needs acceptance testing                         |
+| Membership        | Member directory, dues setup, recording separately received dues, annual validity, early renewal and expiry/reminder processing           | Account registration alone does not grant paid membership; dues recording does not collect money online                    |
+| Events            | Staff creation/editing, registration dates, member/non-member pricing, capacity checks, attendee tracking and CSV/calendar export         | Practice ticket registration is not a real financial charge                                                                |
+| Tickets and entry | Own ticket view, QR/backup code, print/download, cancellation and Staff check-in                                                          | Scanning fills the code; Staff confirms entry. Atomic status changes reject duplicate, cancelled and wrong-event admission |
+| Waitlists         | Queue positions, seat offers, offer expiry and reminder notifications                                                                     | Unattended processing requires the worker or configured protected job trigger                                              |
+| Merchandise       | Size/quantity selection, stock decrement, active-member pricing, owned order history and Staff collection recording                       | Practice order/payment records; no online shop payment collection or shipping integration                                  |
+| Volunteers        | Staff task creation, assignments, deadlines and TODO / DOING / DONE progress tracking                                                     | Volunteers are participants in the task workflow, not a separate authentication role                                       |
+| Announcements     | Dated notice archive, personal notification fan-out and opted-in email queue                                                              | Background delivery and actual recipient inbox receipt must be verified                                                    |
+| Finance           | Dues/ticket/merchandise/fundraiser categories, expense requests, Treasurer review and currency-separated balances                         | Approval records an expense, not a bank payout; receipt links are supported, file uploads are not                          |
+
+### Roles and access
+
+| Role                       | Landing route  | Main permissions                                                                                                                                                                  |
+| -------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Member / Student           | `/my-events`   | Browse events, manage own registrations/tickets, place club shop orders, view tasks/notices, submit own expense requests and manage account preferences                           |
+| Staff                      | `/`            | Manage events/attendees, verify entry, manage inventory/collection, member dues, volunteer tasks and announcements                                                                |
+| Treasurer                  | `/treasurer`   | Review another user's expense requests, record fundraiser receipts, manage membership dues and inspect currency-separated finances; cannot place shop orders or use the door desk |
+| Designated approving Staff | `/admin/users` | Approve/reject every requested role after email verification; ordinary Staff does not automatically gain this capability                                                          |
+| Public visitor             | `/events`      | Browse event listings/details and access sign-in/registration                                                                                                                     |
+
+Selecting a role at registration is a **request**, not an immediate permission grant. Ownership checks protect private tickets, orders and claims. A Treasurer may attend an event and view their own ticket; that does not grant permission to scan and record admission.
+
+The initial accounts already exist in the configured database. Passwords are intentionally absent from source documentation. Normal browser tabs share session cookies: sign out between role checks or use separate browser sessions.
+
+### Navigation and routes
+
+Desktop uses a top navigation bar; phones use a fixed bottom bar. Four frequent destinations are visible for each role. **More** holds the remaining permitted pages. Account, updates and sign-out controls remain in the header.
+
+| Area                        | Routes                                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Authentication and access   | `/login`, `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/access-status`, `/access-denied`   |
+| Overview and members        | `/`, `/members`                                                                                                     |
+| Events and tickets          | `/events`, `/events/[eventId]`, `/events/[eventId]/manage`, `/events/check-in`, `/my-events`, `/tickets/[ticketId]` |
+| Club operations             | `/merchandise`, `/fundraisers`, `/announcements`, `/treasurer`                                                      |
+| Personal and administration | `/account`, `/notifications`, `/admin/users`                                                                        |
+| Existing test payment pages | `/payments`, `/payments/[paymentId]`, `/admin/payments`                                                             |
+
+The More disclosure closes after navigation, outside click or Escape. Navigation visibility complements server authorization; hiding a link is not the security boundary.
+
+## Run locally
+
+### Existing configured local clone
+
+Open PowerShell:
+
+```powershell
+cd E:\Odoo-apex-main\Odoo-apex-main\skyline
+npm run dev -- --port 3001
+```
+
+Open **http://localhost:3001/login**. Stop the app with **Ctrl+C**. Keep only one Skyline app server on that port.
+
+### First run after cloning
+
+```powershell
+git clone https://github.com/maheshwaran6953/Odoo-apex.git
+cd Odoo-apex\skyline
+```
+
+Keep an existing private `.env`. Only if it does not exist, create it from the example:
+
+```powershell
+if (-not (Test-Path -LiteralPath .env)) {
+    Copy-Item -LiteralPath .env.example -Destination .env
+}
+```
+
+Configure the private values described below **before** installation/generation, then run:
+
+```powershell
+npm ci
+npm run db:generate
+npm run db:validate
+npm run dev -- --port 3001
+```
+
+Installation also generates Prisma Client through `postinstall`. The explicit generate command is useful if Prisma reports that its client has not initialized. Internet access is needed for installation, Supabase and external email.
+
+Do **not** run seed, reset, import or bootstrap during ordinary startup. `npm run db:seed` is disabled. The configured database already contains accounts and user-entered records. A genuinely empty database needs intentional schema setup and initial Staff bootstrap using the [local runbook](docs/LOCAL_RUNBOOK.md).
+
+### Private environment configuration
+
+Configure [`skyline/.env.example`](skyline/.env.example) values in the ignored `skyline/.env`; never put secrets in Git or documentation.
+
+| Variable                                | Purpose                                                                                         |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `DATABASE_PROVIDER`                     | `postgresql` for the current Supabase database                                                  |
+| `DATABASE_URL`                          | Private runtime PostgreSQL connection string                                                    |
+| `DIRECT_URL`                            | Private reachable schema-management connection string                                           |
+| `APP_URL`                               | `http://localhost:3001` locally                                                                 |
+| `EMAIL_PROVIDER`                        | `smtp` for the current Gmail configuration; `resend` is the optional alternative                |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | Current Gmail values: `smtp.gmail.com`, `465`, `true`                                           |
+| `SMTP_USER`, `SMTP_PASSWORD`            | Sending mailbox and Google App Password                                                         |
+| `EMAIL_FROM`                            | Sender; must match `SMTP_USER` for Gmail                                                        |
+| `OTP_SECRET`                            | Private stable secret of at least 32 characters                                                 |
+| `EMAIL_VERIFICATION_ENABLED`            | `true` in the current local configuration; keep verification gated until delivery is configured |
+| `RESEND_API_KEY`                        | Needed only when selecting the Resend adapter with an appropriate sender                        |
+| `CRON_SECRET`                           | Needed when using the protected background-job HTTP endpoint                                    |
+
+Existing `RAZORPAY_*` configuration is for paused Test Mode work. Do not switch to Live Mode as part of setup. A Supabase project URL alone is not a database connection string.
+
+Only when intentionally applying reviewed schema changes:
+
+```powershell
+npm run db:push
+```
+
+This wrapper also applies server-only Supabase table access restrictions. Schema push is the current mechanism; versioned production migrations remain future hardening. It is not a normal startup command.
+
+### Background processing
+
+In a second terminal from the `skyline` folder:
+
+```powershell
+npm run events:watch
+```
+
+The worker processes immediately and then approximately every five minutes. It handles event reminders, waitlist offers/expiry, membership processing and queued messages. It also invokes existing test-payment reconciliation logic. A single pass is `npm run events:jobs`.
+
+Registration/resend attempts immediate OTP delivery independently. Running the web server alone does not run unattended reminder jobs. Stop the worker with **Ctrl+C** when it is no longer needed.
+
+### Production-style local run
+
+Stop the current app server before rebuilding:
+
+```powershell
+npm run build
+npm run start -- --port 3001
+```
+
+`start` requires a successful build and does not watch source changes. Do not run `dev` and `start` on the same port, or overwrite `.next` while its server is running. Stop app/worker processes before reinstalling or regenerating Prisma on Windows to avoid file locks.
+
+## Repository structure
 
 ```text
-[ Student ] ---> ( 1. Submit Registration ) ---> [ Application Server ]
-                                                        |
-                                            ( 2. Save Profile & Payment )
-                                                        v
-[ Activate Benefits ] <--- ( 3. Benefits Active ) <--- [ Supabase (PostgreSQL) ]
+Odoo-apex/
+├── README.md
+├── reference.md                     # Commands, stack, roles and operating flows
+├── docs/                            # Runbook, coverage and verification evidence
+└── skyline/
+    ├── package.json
+    ├── package-lock.json
+    ├── .env.example                 # Configuration template; no real secrets
+    ├── prisma/schema.prisma         # Base schema; provider wrapper selects PostgreSQL
+    ├── scripts/                     # Database, worker, email and verification commands
+    └── src/
+        ├── app/                     # App Router pages, layouts and API Route Handlers
+        ├── components/club/         # Reusable UI, navigation, forms and scanners
+        ├── server/actions/          # Server Actions grouped by domain
+        ├── server/                  # Account, OTP, event, club, finance and payment services
+        ├── lib/                     # Prisma client, validation and password helpers
+        └── middleware.ts            # Request middleware
 ```
 
-<details>
-<summary><b>View Mermaid Diagram Format</b></summary>
+## Verification and current limits
 
-```mermaid
-sequenceDiagram
-    autonumber
-    Student->>System: Submit Registration Form
-    System->>Supabase_PostgreSQL: Save Member Profile & Payment Status
-    Supabase_PostgreSQL-->>System: Confirmation
-    System-->>Student: Activate Membership Benefits
-```
-</details>
+From `skyline`:
 
----
-
-### 2. Event Ticket Purchase
-1. An organizer publishes an event and configures ticket prices and capacity.
-2. A student selects the appropriate ticket type.
-3. The system processes the purchase and generates a digital ticket.
-4. An organizer verifies the ticket at the entrance.
-5. Attendance and event revenue are recorded.
-
-```text
-[ Event Organizer ] ---> ( 1. Publish Event ) -------> [ Application Server ]
-                                                               |
-[ Student ] ------------> ( 2. Purchase Ticket ) ------------> |
-                                                               |
-[ Digital Ticket ] <----- ( 3. Issue Ticket ) <----------------+ ( 4. Update Inventory )
-                                                                         |
-                                                                         v
-[ Entrance Scan ] ------> ( 5. Verify Ticket ) --------------> [ Supabase (PostgreSQL) ]
+```powershell
+npm run format:check
+npm run lint
+npm run typecheck
+npm run build
 ```
 
-<details>
-<summary><b>View Mermaid Diagram Format</b></summary>
+The latest implementation checks passed. Service verification commands are `verify:basics`, `verify:events`, `verify:finance`, `verify:otp` and `verify:email`. These create scoped temporary records in the configured database and clean their exact fixtures; prefer an isolated test database for repeated checks. `verify:email` uses simulated delivery and does not establish real inbox arrival.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    Organizer->>System: Publish Event
-    Student->>System: Select & Purchase Ticket
-    System->>Supabase_PostgreSQL: Record Purchase & Update Capacity
-    System-->>Student: Generate Digital Ticket
-    Student->>Organizer: Present Digital Ticket at Entrance
-    Organizer->>System: Scan & Verify Ticket
-    System->>Supabase_PostgreSQL: Log Attendance & Update Revenue Summary
-```
-</details>
+- Gmail SMTP connection/TLS/authentication passed `npm run email:check`; real OTP, notice and reminder inbox delivery remains unverified.
+- Razorpay work is paused. Public webhook delivery and refunds remain unresolved; real online collection, shop payment and bank payouts are not complete.
+- Physical QR-camera/device acceptance and a verified public deployment remain pending. Camera access requires HTTPS or localhost.
+- Receipt metadata uses optional validated HTTPS links, not file uploads or Supabase Storage.
+- Existing Next.js 14/Prisma dependency advisories require a deliberate supported-version upgrade before public production release. Versioned migrations, backup restore rehearsal and deployment-specific abuse protection also remain hardening work.
 
----
+See [repair verification](docs/REPAIR_VERIFICATION.md) for completed checks and boundaries. No UI, schema or application behavior is changed by this README update.
 
-### 3. Merchandise Order
-1. An administrator lists products, sizes, prices, and stock.
-2. A member selects merchandise and places an order.
-3. The system records payment and updates inventory.
-4. The order is tracked until fulfilment.
+## Further documentation
 
----
+- [Local reference](reference.md): run commands, actual stack, roles and end-to-end flows.
+- [Local runbook](docs/LOCAL_RUNBOOK.md): setup, accounts, worker operation and troubleshooting.
+- [Original problem-statement coverage](docs/PROBLEM_STATEMENT_TECH_STACK.md): requirement-by-requirement implementation matrix.
+- [Email verification](docs/EMAIL_VERIFICATION.md): provider configuration and OTP acceptance steps.
+- [Repair verification](docs/REPAIR_VERIFICATION.md): implementation checks and outstanding acceptance work.
+- [Payment documentation](docs/PAYMENTS.md): existing paused Test Mode integration.
 
-### 4. Fundraiser Coordination
-1. An organizer creates a fundraiser and its associated tasks.
-2. Tasks are assigned to volunteers with deadlines.
-3. Volunteers update their task progress.
-4. The organizer monitors completion and fundraiser progress.
-5. Income and expenses are recorded in the financial system.
-
----
-
-### 5. Semester-End Financial Reporting
-1. The treasurer reviews all recorded income.
-2. Expenses and reimbursement requests are reconciled with receipts.
-3. The system calculates total income, total expenses, and the remaining balance.
-4. A financial summary is generated for review by the leadership team.
-
-```text
-[ Treasurer ] ----------> ( 1. Request Reconciliation ) ----> [ Application Server ]
-                                                                       |
-                                                           ( 2. Fetch Ledger & Receipts )
-                                                                       v
-[ Summary Report ] <----- ( 3. Deliver Report ) <------------- [ Supabase (PostgreSQL) ]
-```
-
-<details>
-<summary><b>View Mermaid Diagram Format</b></summary>
-
-```mermaid
-sequenceDiagram
-    autonumber
-    Treasurer->>System: Initiate Financial Reconciliation
-    System->>Supabase_PostgreSQL: Fetch Income & Verified Receipts
-    Supabase_PostgreSQL-->>System: Financial Records
-    System->>System: Calculate Total Balance & Summary
-    System-->>Treasurer: Generate Financial Summary Report
-```
-</details>
-
----
-
-## 🛠️ Technology Stack
-
-| Component Layer | Technology / Implementation | Function |
-| :--- | :--- | :--- |
-| **Frontend UI** | HTML5 / CSS3 / JavaScript | Responsive dashboard, event catalog, forms & announcements |
-| **Backend Core** | Python Web Framework | Role-switching, business logic execution & task routing |
-| **Database** | **Supabase (PostgreSQL)** | Relational database persistence for members, tickets, stock & finances |
-| **Documentation** | GitHub Markdown & Mermaid.js | Dynamic workflows, verification matrix & walkthrough guides |
-
----
-
-## 📁 Repository Structure
-
-```text
-Commit/
-├── skyline/                         # Core practice application module
-│   ├── README.md                    # Skyline application instructions
-│   ├── app.py                       # Main application entrypoint
-│   ├── models/                      # Data models & Supabase DB client logic
-│   ├── templates/                   # HTML view templates
-│   └── static/                      # Custom CSS styles, JS & assets
-│
-├── docs/                            # Project documentation & verification
-│   ├── PROJECT_WALKTHROUGH.md       # Beginner-friendly guide & remaining work
-│   └── VERIFICATION.md              # Completed verification matrix & blockers
-│
-└── README.md                        # Master System README (You are here)
-```
-
----
-
-## 💡 Expected Benefits
-
-- ⚡ **Centralized Management:** All club operations under one unified platform.
-- 📉 **Reduced Administrative Overhead:** Eliminates manual data entry across multiple spreadsheets.
-- 🪪 **Accurate Membership Tracking:** Automated validity monitoring and timely renewal notifications.
-- 🎟️ **Efficient Event Check-Ins:** Digital tickets eliminate entry bottlenecks and fraud.
-- 👕 **Automated Inventory Control:** Real-time merchandise stock tracking avoids overselling.
-- 🤝 **Transparent Task Delegation:** Clear volunteer ownership and event task deadlines.
-- 💰 **Verifiable Financial Records:** Instant expense reconciliation with attached receipt proof.
-- 🛡️ **Institutional Memory:** Centralized audit trail for seamless year-to-year club handovers.
-
----
-
-## 🎯 Project Goal
-
-> Build a simple, reliable, and centralized system that enables the Skyline Student Association to manage its entire semester—from onboarding new members to organizing events and closing the books—without depending on scattered spreadsheets, notebooks, and group chats.
-
----
-
-## ⚙️ Implemented Practice Application
-
-The current implementation is located in [`skyline/`](skyline/README.md). 
-
-For detailed documentation:
-- Read [`docs/PROJECT_WALKTHROUGH.md`](docs/PROJECT_WALKTHROUGH.md) for a beginner-friendly explanation of the club workflows, implemented features, and remaining work.
-- Check [`docs/VERIFICATION.md`](docs/VERIFICATION.md) for completed test checks, unverified scenarios, and current production blockers.
-
-> [!NOTE]
-> The features listed above describe the product's intended scope. The application uses practice role switching and simulated payment records, backed by **Supabase (PostgreSQL)** persistence. It does not yet provide production authentication, actual payment collection, email delivery, receipt uploads, or a verified live deployment.
-
----
-
-## 🚀 Setup & Getting Started
-
-### 1. Clone the Repository
-```bash
-git clone <repository-url>
-cd Commit
-```
-
-### 2. Launch the Application
-Configure your Supabase credentials in your environment/config and launch the development server:
-
-```bash
-cd skyline
-python app.py
-```
-
----
-
-<div align="center">
-
- **Skyline Student Association** • [Back to Top ⬆️](#-skyline-student-association)
-
-</div>
+Older planning/review documents record previous states. Use this README, the local reference and repair verification for the current implementation.

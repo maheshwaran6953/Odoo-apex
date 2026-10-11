@@ -1,87 +1,68 @@
-> Current repair/setup instructions: [Local runbook](../docs/LOCAL_RUNBOOK.md). Old review/demo data was removed. Do not run demo seed. New accounts require OTP verification and designated Staff approval; real OTP email delivery is currently deferred.
+# Skyline application
 
-# Skyline Student Organization System
+This folder contains the Next.js application for the Skyline Student Organization System. Updated: **11 October 2026**.
 
-Members, events, merchandise, volunteer work, and club finances in one workspace.
-The interface uses the existing Skyline glass-panel design on desktop and phones.
+See the [repository README](../README.md) for the verified current tech stack, implemented features, role permissions, routes and limitations. Use the [local reference](../reference.md) and [local runbook](../docs/LOCAL_RUNBOOK.md) for detailed operation.
 
-## Run the application
+## Current stack
 
-Use Node.js 20+ and npm. From this folder in PowerShell:
+Next.js 14.2.35 App Router, React 18.3.1, TypeScript 5.9.3, Tailwind CSS 3.4.19/custom glass styling, Lucide React, Prisma 6.19.3 and **Supabase PostgreSQL**. Next.js Server Actions and Route Handlers provide the backend. Authentication uses custom cookie sessions and scrypt password hashes; it does not use JWT or Supabase Auth.
+
+Ticket QR rendering uses qrcode.react; camera scanning uses @zxing/browser. OTP and queued email use Nodemailer/Gmail SMTP, with an optional Resend adapter. The tsx worker handles reminders and waitlists. Razorpay Test Mode work remains paused.
+
+## Run the configured local app
+
+From this folder:
 
 ```powershell
-Copy-Item .env.example .env # Only if .env does not already exist
-npm ci
-npm run db:push
 npm run dev -- --port 3001
 ```
 
-Open http://localhost:3001/events. Do not seed an existing club database. Stop this
-checkout's running app before regenerating Prisma on Windows to avoid DLL locks.
-`npm run db:seed` is optional for a disposable empty database and is blocked after
-accounts exist. It deletes existing club sample records.
-
-## Accounts and staff setup
-
-The old practice role switcher has been replaced by account sign-in. New accounts
-start as Member. Booking and waitlists require email verification or explicit staff
-identity confirmation. Paid club membership is separate from account registration.
-
-Configure BOOTSTRAP_EMAIL, BOOTSTRAP_NAME and BOOTSTRAP_PASSWORD privately in `.env`,
-then run `npm run account:bootstrap` once to create the first Staff account. Use a
-unique password of at least 12 characters and remove it from `.env` afterward.
-Staff assigns other roles and confirms identities at `/admin/users`.
-
-## Events, tickets and reminders
-
-- `/events`: public discovery, filters, dates, availability and event details.
-- `/my-events`: your registrations, waitlist positions and offered seats.
-- `/tickets/[ticketId]`: private QR ticket, download, print and cancellation.
-- `/events/[eventId]/manage`: Staff attendee list, CSV, attendance and event editing.
-- `/events/check-in`: selected-event QR/camera or manual-code verification.
-- `/notifications`: your saved changes, seat offers and reminders.
-- `/account`: verification, email preferences and reimbursement submission.
-
-Run `npm run events:watch` in a separate terminal for reminders and offer expiry
-processing every five minutes. Staff can also trigger jobs manually. Email remains
-queued until RESEND_API_KEY and EMAIL_FROM are configured. Camera scanning requires
-HTTPS or localhost. Event views refresh every 20 seconds while visible.
-
-Practice events retain simulated registration. INR events can now use Razorpay
-Test Mode: a matching captured payment must be verified on the server before a QR
-ticket is issued. Test transactions move no real money and do not increase posted
-club income. Cancellation revokes the ticket immediately; a refund is a separate,
-provider-confirmed operation. Live Razorpay keys are rejected.
-
-`/payments` shows your checkout history. `/payments/[paymentId]` provides payment
-status, bounded seat holds, retry/reconciliation and ticket links. Staff and
-Treasurer use `/admin/payments` for reconciliation and full test refunds.
-
-Read [payment setup and operation](../docs/PAYMENTS.md) and
-[the implementation plan](../docs/PAYMENT_IMPLEMENTATION_PLAN.md).
-
-## Database and Supabase
-
-The active workspace uses Supabase PostgreSQL through its session pooler and
-Prisma 6.19.3. Fresh checkouts default to SQLite (`prisma/dev.db`) until private
-PostgreSQL connection strings are configured. The project URL alone does not grant
-database access. Do not overwrite an existing `.env` or reseed an existing database.
-
-Read [the complete setup and event guide](../docs/EVENTS_AND_SUPABASE.md) before
-changing providers. It covers backups, staff bootstrap, migration, server-only table
-access, email configuration, scheduler setup and the remaining deployment boundaries.
-
-## Release commands
+Open http://localhost:3001/login. Stop with Ctrl+C. For first installation, configure the ignored `.env` first, then run:
 
 ```powershell
+npm ci
+npm run db:generate
 npm run db:validate
-npm run typecheck
-$env:SKYLINE_DIST_DIR = '.next-build'
-npm run build
-# Only after a successful build, in the same terminal:
-npm start -- --port 3001
+npm run dev -- --port 3001
 ```
 
-Use the same SKYLINE_DIST_DIR for build and start. `npm run verify` runs schema,
-TypeScript and build checks in an isolated output directory. Public deployment and
-actual email delivery remain unverified until their services are configured.
+The current private configuration selects PostgreSQL. The checked-in example defaults to SQLite; do not overwrite an existing `.env`. The database wrapper generates the appropriate schema from `DATABASE_PROVIDER`, `DATABASE_URL` and `DIRECT_URL`.
+
+Do not run seed/reset/bootstrap/import during normal startup. Demo seeding is disabled; existing accounts and dynamically entered records remain in Supabase. Only apply `npm run db:push` for an intentional reviewed schema change.
+
+## Accounts and navigation
+
+New users request MEMBER, STAFF or TREASURER access during registration, verify their email with OTP, then wait for the designated Staff account to approve the request. Ordinary Staff cannot approve roles. Paid club membership is separate from account approval.
+
+Desktop has top navigation; mobile has bottom navigation. More contains other permitted pages. Members land at `/my-events`, Staff at `/`, and Treasurers at `/treasurer`. Server role/ownership checks protect restricted actions and private records.
+
+## Worker and production run
+
+In a separate terminal:
+
+```powershell
+npm run events:watch
+```
+
+OTP issuance attempts immediate delivery; queued updates and unattended reminders need background processing. SMTP authentication passed, but real recipient inbox delivery remains unverified. Camera scanning requires HTTPS or localhost.
+
+For a production-style local run, stop the app server first:
+
+```powershell
+npm run build
+npm run start -- --port 3001
+```
+
+Do not rebuild `.next` while its server is using it, or run two app servers on the same port. Stop app and worker before Prisma regeneration/reinstallation on Windows.
+
+## Code checks
+
+```powershell
+npm run format:check
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Scoped service checks: `verify:basics`, `verify:events`, `verify:finance`, `verify:otp`, `verify:email`. They create/clean temporary fixtures; simulated email checks do not prove inbox delivery. See [repair verification](../docs/REPAIR_VERIFICATION.md) for current evidence and [the repository README](../README.md#verification-and-current-limits) for remaining release work.

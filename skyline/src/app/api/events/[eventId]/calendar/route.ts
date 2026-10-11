@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
 export async function GET(
   _request: Request,
-  { params }: { params: { eventId: string } },
+  { params: paramsPromise }: { params: Promise<{ eventId: string }> },
 ) {
+  const params = await paramsPromise;
   const event = await db.event.findUnique({ where: { id: params.eventId } });
   if (!event) return new Response("Event not found", { status: 404 });
   const escape = (text: string) =>

@@ -27,14 +27,14 @@ async function createSession(userId: string) {
   await db.session.create({
     data: { id: tokenHash(token), userId, expiresAt },
   });
-  cookies().set("skyline_session", token, {
+  (await cookies()).set("skyline_session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     expires: expiresAt,
   });
-  cookies().delete("skyline_role");
+  (await cookies()).delete("skyline_role");
 }
 async function accountEmail(
   userId: string,
@@ -137,7 +137,7 @@ export async function register(data: FormData) {
     };
   const requestKey = tokenHash(
     "registration:" +
-      (headers().get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      ((await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ||
         "local-client"),
   );
   const recent = await db.loginAttempt.findUnique({
@@ -352,10 +352,10 @@ export async function manageUser(data: FormData) {
   }
 }
 export async function signOut() {
-  const token = cookies().get("skyline_session")?.value;
+  const token = (await cookies()).get("skyline_session")?.value;
   if (token) await db.session.deleteMany({ where: { id: tokenHash(token) } });
-  cookies().delete("skyline_session");
-  cookies().delete("skyline_role");
+  (await cookies()).delete("skyline_session");
+  (await cookies()).delete("skyline_role");
   redirect("/login");
 }
 

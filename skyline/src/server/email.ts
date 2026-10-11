@@ -7,7 +7,7 @@ import {
 } from "@/server/email-transport";
 
 export async function deliverQueuedEmail(
-  options: { key?: string } = {},
+  options: { key?: string; limit?: number } = {},
   dispatch: typeof sendEmail = sendEmail,
 ) {
   if (!emailDeliveryConfigured())
@@ -25,7 +25,7 @@ export async function deliverQueuedEmail(
       ],
     },
     orderBy: { createdAt: "asc" },
-    take: 50,
+    take: Math.max(1, Math.min(50, Math.trunc(options.limit || 50))),
   });
   for (const row of rows) {
     let obsolete = false;

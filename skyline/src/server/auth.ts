@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { tokenHash } from "@/lib/password";
 export type Role = "MEMBER" | "STAFF" | "TREASURER";
 export const currentUser = cache(async () => {
-  const token = cookies().get("skyline_session")?.value;
+  const token = (await cookies()).get("skyline_session")?.value;
   if (!token) return null;
   const session = await db.session.findUnique({
     where: { id: tokenHash(token) },

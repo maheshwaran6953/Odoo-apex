@@ -361,9 +361,9 @@ Repeat creation with only one changed invalid field per attempt:
 2. Compare event listing/detail, edit field and ticket date/time.
 3. Click Add to calendar; download the `.ics` and import/open it in a calendar without inviting anyone.
 4. Confirm the calendar entry represents the same instant, location and event title.
-5. If the server timezone differs, record which labels state server time and whether conversion is correct.
+5. Compare event/ticket/waitlist labels: campus timezone is Asia/Kolkata by default, regardless of the server timezone. Calendar clients display the same stored instant in their local zone.
 
-**Expected:** Stored instant and calendar are correct; editing without changing time does not shift it. Server-rendered labels may use server timezone today; inconsistent/misleading labels should be reported, not silently treated as a pass.
+**Expected:** Stored instant and calendar are correct; editing without changing time does not shift it. Server-rendered operational labels use the configured campus zone. A deployment timezone change must not alter the displayed instant; report inconsistencies.
 
 ### TC30 — Public discovery, filters and empty state
 
@@ -636,9 +636,9 @@ Repeat creation with only one changed invalid field per attempt:
 2. Confirm To do count/card, assignee and due date; use its status selector → In progress → Update status, then Done → Update status.
 3. Refresh Overview; finished task is no longer in its open-task previews. Move it back to To do for another valid test.
 4. Create one Unassigned task with optional date/notes blank; test short title, >200 title, >3000 notes and past/today-midnight deadline separately.
-5. Member/Treasurer opens board: no create/status controls. For overdue styling, use a scheduled task whose future date has now elapsed or an isolated fixture.
+5. The assigned Member opens the board and changes their task status; another Member/Treasurer has no status control on it. Staff retains create/all-task status controls. For overdue styling, use a scheduled task whose future date has now elapsed or an isolated fixture.
 
-**Expected:** Persisted TODO/DOING/DONE transitions and column counts; notes/assignment visible; invalid creation rejected. Date-only deadlines are interpreted at midnight, so use tomorrow, not today, for a normal valid case. Member assignment currently does not permit Member editing; that enhancement is not built.
+**Expected:** Persisted TODO/DOING/DONE transitions and column counts; notes/assignment visible; invalid creation rejected. Date-only deadlines are interpreted at midnight, so use tomorrow, not today, for a normal valid case. Assigned account may update only its task status; it cannot create tasks or edit another volunteer assignment. Test unlinked/unassigned identities separately in TC82.
 
 ### TC58 — Publish, recipient fan-out and notice email
 
@@ -670,7 +670,7 @@ Repeat creation with only one changed invalid field per attempt:
 4. Treasurer opens Finance; find exact claimant, amount, pending status and Open receipt.
 5. Create a second valid request without a receipt URL.
 
-**Expected:** Pending expense, owned history, optional link opens safely in a new tab. Pending affects Awaiting review, not posted Money out/Club balance. No receipt file upload or bank transfer.
+**Expected:** Pending expense, owned history, optional link opens safely in a new tab. Pending affects Awaiting review, not posted Money out/Club balance. Private file upload is covered in TC86–TC89; this case covers HTTPS links. No bank transfer occurs.
 
 ### TC61 — Expense amount/description/receipt validation
 
@@ -806,7 +806,7 @@ Repeat creation with only one changed invalid field per attempt:
 3. An authorized developer later verifies the secret-protected scheduler against the isolated database using a secure secret source; keep token out of URL, screenshots and issue logs.
 4. Test calendar endpoint for a real public event and a nonexistent ID.
 
-**Expected:** Jobs without valid authorization return 401 and do not execute. Public event calendar can be downloaded; nonexistent calendar returns not found. Authenticated Staff without verified/approved state needs the additional regression in TC80; current CSV code has that guard gap.
+**Expected:** Jobs without valid authorization return 401 and do not execute. Public event calendar can be downloaded; nonexistent calendar returns not found. Authenticated Staff without verified/approved state needs the additional regression in TC80; the handler now enforces approved/verified Staff; TC80 checks its regression.
 
 ### TC75 — Network/database failure and uncertain save
 
@@ -864,7 +864,7 @@ Repeat creation with only one changed invalid field per attempt:
 
 ### TC80 — Former Staff denied attendee export after access rejection
 
-**Known gap from source inspection:** Attendee CSV handler currently checks session identity and `role === STAFF`, but not `emailVerifiedAt`/`approvalStatus`. New applicants start MEMBER, but a previously approved Staff user can retain STAFF in the database after rejection. Do not treat the route as fully gated until fixed and this case passes.
+**Repaired implementation:** Attendee CSV handler now requires a verified, approved and active Staff account; the old implementation checked only `role === STAFF`, but not `emailVerifiedAt`/`approvalStatus`. New applicants start MEMBER, but a previously approved Staff user can retain STAFF in the database after rejection. Run this direct-session case to confirm the repair in the current environment; the corresponding service regression passed.
 
 1. Use disposable ordinary Staff from TC10; create/register authorized test attendees in an isolated event.
 2. Designated Staff changes that user's decision to REJECTED with a valid reason; verify old session revoked.
@@ -872,11 +872,11 @@ Repeat creation with only one changed invalid field per attempt:
 4. While in that restricted session, navigate directly to `/api/events/TEST_EVENT_ID/attendees`.
 5. Compare with approved Staff, who should still export successfully. Do not use actual student records for the exploit reproduction.
 
-**Required result:** Rejected/unverified/pending/disabled identities must never download attendee data. Expected current defect for rejected former Staff must be logged FAIL if reproduced; later fix should use verified/approved actor checks at the Route Handler boundary, not just page navigation.
+**Required result:** Rejected/unverified/pending/disabled identities must never download attendee data. Any attendee disclosure is a FAIL. Account-state checks apply at the Route Handler boundary, independently of page navigation.
 
 ### TC81 — Export price/currency labels and payment-mode wording
 
-**Known mismatch from source inspection:** CSV currently labels all prices `Recorded price (USD)` and all PAID rows `Registered (simulated payment)`, even though test-checkout tickets can use INR. Practice USD paths are unaffected by that particular currency mismatch.
+**Repaired implementation:** CSV now includes Recorded price, Currency and Payment mode columns using stored ticket data. The old implementation labelled all prices `Recorded price (USD)` and all PAID rows `Registered (simulated payment)`, even though test-checkout tickets can use INR. Practice USD paths are unaffected by that particular currency mismatch.
 
 1. Export a Practice/USD test event and confirm header/rows accurately reflect those records.
 2. If an existing authorized INR Test Mode event has tickets, export read-only as approved Staff and compare currency/status wording to the ticket/management page. Otherwise mark the INR portion BLOCKED until a later payment test run.
@@ -944,3 +944,115 @@ Use these already prepared dynamic test/review records, after the relevant accep
 9. Explain that gateway work, public deployment and production hardening are separate remaining tasks.
 
 Do not spend the review clicking unverified/deferred gateway buttons. Prepare fallback manual ticket-code entry only if camera access is unavailable; explain which method was demonstrated.
+
+## 18. Added operational features: detailed acceptance
+
+### TC82 — Assigned volunteer status and ownership
+
+1. Staff creates two tasks: assign PREFIX Assigned to Member A; leave PREFIX Unassigned without an assignee.
+2. Member A opens Volunteers and confirms Assigned exposes the status selector, while Unassigned does not.
+3. Change Assigned to In progress, then Done. Reload and compare column counts and Staff's view.
+4. A different approved Member or Treasurer opens Volunteers: Assigned has no status controls.
+5. Staff updates Unassigned and Assigned; both should succeed.
+6. In a controlled service run, attempt another volunteer's task ID, an unknown status and an ineligible account.
+
+**Expected:** Only the assigned linked account or Staff changes status; no create/edit/reassignment privilege is added. Service coverage: verify:operations.
+
+### TC83 — Receive/correct merchandise stock and audit
+
+1. Staff adds PREFIX Stock test, size M, stock 5, price 10.00.
+2. More → Club shop → Receive or adjust merchandise stock.
+3. Select that exact M variant, enter +8 and reason PREFIX Supplier delivery; Record stock adjustment.
+4. Reload: M stock is 13, and Recent adjustments shows +8, 5 → 13, reason, date and Staff name.
+5. Enter −3 and PREFIX Damaged units; stock becomes 10 and a second audit row shows 13 → 10.
+6. Compare Finance before/after: there is no income/expense from either adjustment.
+7. Another size's stock and existing order prices must remain unchanged.
+
+**Expected:** Persisted audited adjustments, no finance posting or modification of earlier order snapshots.
+
+### TC84 — Invalid, unauthorized and concurrent stock adjustments
+
+1. Try 0, 1.5, −11 against stock 10, over 1,000,000, blank reason, two-character reason and >300 reason.
+2. Member/Treasurer opens Club shop: no adjustment controls. Run service ownership/role checks for direct submissions.
+3. Two Staff sessions open the variant with stock 10. Both attempt −8 with distinct request keys.
+4. Refresh: exactly one removal succeeds, stock is 2, and one audit row was added.
+5. Retry the same successful submission key without changing payload; it must not decrement again.
+6. Attempt changed payload with the same key in the service suite.
+
+**Expected:** No negative/over-limit stock, no unauthorized writes, no lost updates or repeated adjustment. Client loading alone is not evidence of server idempotency.
+
+### TC85 — Finance filters, pagination and CSV
+
+1. Treasurer opens Finance with known USD/INR and posted/pending test records from earlier cases.
+2. Select Currency=INR, Category=reimbursement, Status=pending, Entry type=Expenses, and a description fragment; Apply filters.
+3. Verify URL selection, visible rows and filtered KPI definitions. No USD entry may appear.
+4. Add From/To dates containing the target claim; To date is inclusive in UTC.
+5. Export filtered CSV. Open as text first: only matching rows, correct currencies, status/claimant and UTC timestamps.
+6. Clear filters. With >25 authorized test rows, Next/Previous preserve selected filters and provide stable pagination.
+7. Try reversed dates, malformed/impossible dates, unknown currency/status and duplicate query parameters directly in an isolated test route.
+8. Member/Staff/signed-out and pending/unverified Treasurer cannot access /api/finance/export.
+
+**Expected:** Table uses 25 rows/page; CSV and totals include all matching rows up to 10,000. Broader reports request narrower filters. Currencies remain separate and test entries never become posted balance. Boundary fixtures in verify:operations verify 00:00 and 23:59:59.999 UTC inclusion.
+
+### TC86 — Upload a private receipt and review its claim
+
+1. Confirm storage:setup succeeds and skyline-receipts is Private in Supabase Storage.
+2. Member My account → Submit a club expense.
+3. Choose a harmless PDF/PNG/JPEG ≤2 MB, enter PREFIX Private receipt, INR 12.50, and leave Receipt link empty.
+4. Submit for review; record the expense ID privately, not in a public issue.
+5. Reload My expense requests; Open receipt downloads the original file.
+6. Treasurer opens Finance, finds the claimant and pending request, and downloads its receipt.
+7. Compare bytes/file appearance. Review the claim normally; approval must not perform a bank payout.
+
+**Expected:** One pending claim with private receipt metadata, uploaded file persists, owner/Treasurer downloads are correct, and pending amount is excluded from posted balance.
+
+### TC87 — Receipt size, type and conflicting inputs
+
+1. Try an empty file, >2 MB PDF, SVG/HTML, and a renamed text file with .png extension.
+2. Enter both a valid HTTPS link and a valid receipt file.
+3. Try invalid amount/description with a valid file.
+4. Use the service verification for exact signature/MIME mismatch and empty-file cases that a browser selector may filter.
+5. Compare claim list and private bucket: rejected operations should create no claim/file. A server-action body-limit error for a very large request is expected failure, not success.
+
+**Expected:** Nonempty PDF/PNG/JPEG content only, maximum 2 MB, no simultaneous file/link and no uploaded object before ordinary input validation. Signature checking is not malware scanning.
+
+### TC88 — Private receipt URL access boundaries
+
+1. Copy the TC86 application receipt URL privately.
+2. Owner and approved verified Treasurer download successfully.
+3. Open the URL as another Member, Staff and signed-out visitor.
+4. In isolated fixtures, test pending/rejected/unverified/disabled Treasurer accounts, including stale sessions.
+5. Try the file's Supabase public URL only in the dedicated live storage suite; it must not return the receipt.
+6. Inspect download headers: private/no-store, attachment, nosniff and sandbox. No service key or public/signed storage URL should be in rendered page content.
+
+**Expected:** Unauthorized actors get no receipt bytes; signed-out returns 401, ineligible returns 403, unauthorized authenticated non-owner returns 404. Approved Staff has no blanket access to personal claim receipts.
+
+### TC89 — Expense retry and storage/database failure
+
+1. Submit a valid private-file claim; reload alone must not create another claim.
+2. Use verify:operations to concurrently retry the identical stable request key and payload.
+3. Confirm one claim and one linked object; changed payload under that key is rejected.
+4. Use an isolated transport fixture to reject upload, then simulate access revocation before database save.
+5. Confirm failed upload creates no claim; confirmed unlinked upload is removed after save failure, and the previous successful receipt remains.
+6. Reconcile any ambiguous network/process-crash outcome before manually retrying or deleting objects.
+
+**Expected:** No duplicate claim and no deletion of another/winning claim's receipt. Private orphan cleanup after process crashes remains an operational reconciliation task.
+
+### TC90 — Pending/unverified public event browsing
+
+1. A disposable registered but unverified account opens /events and one public event detail.
+2. Repeat with a verified account waiting for role approval.
+3. Both can view public event information; neither can register, join waitlist, use Staff creation controls or export attendees.
+4. Follow verification/approval guidance and attempt protected routes such as /my-events, /fundraisers and /treasurer.
+5. Finish normal OTP/approval only for the disposable account, then verify allowed operations.
+
+**Expected:** Public browsing is consistent with its links. Operational access still requires verification and approval. The requested role does not create privileges.
+
+### TC91 — One explicitly authorized real mailbox acceptance check
+
+1. Obtain explicit permission for the target mailbox. Run email:acceptance -- --send --to that mailbox once.
+2. Confirm the targeted application outbox message becomes SENT with exactly one accepted dispatch.
+3. The recipient checks Inbox/Spam and confirms arrival.
+4. Record provider acceptance and recipient confirmation separately; do not include secrets/message IDs or send other queued messages.
+
+**Recorded evidence, 11 October 2026:** One message titled Skyline — email delivery check was sent to the owner's authorized Gmail mailbox. The application recorded SENT, sent=1, failed=0; the owner confirmed Received in Inbox. No other queued mail was dispatched. This case does not replace real registration OTP, password-reset or event reminder acceptance.

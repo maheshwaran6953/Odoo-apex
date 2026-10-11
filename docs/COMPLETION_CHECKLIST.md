@@ -1,8 +1,8 @@
 # Skyline completion checklist
 
-Updated: 11 October 2026. Reviewed implementation: commit `d56a26e` plus its preceding application changes. This is a completion/acceptance checklist, not a claim that every browser test has passed.
+Updated: 11 October 2026. Includes the operational repairs and private receipt implementation. Recorded evidence: OPERATIONAL_FEATURES.md and REPAIR_VERIFICATION.md. Unchecked manual/production gates remain open.
 
-Use [the manual testing guide](MANUAL_TESTING_GUIDE.md) for exact actions. Use [repair verification](REPAIR_VERIFICATION.md) for checks already executed. Payments remain paused. This update changes documentation only; it does not run tests against user records or send email.
+Use [the manual testing guide](MANUAL_TESTING_GUIDE.md) for 91 exact cases and [operational instructions](OPERATIONAL_FEATURES.md) for the new controls. Payment work remains paused. Existing business records are preserved.
 
 ## Status meanings
 
@@ -43,8 +43,8 @@ Use [the manual testing guide](MANUAL_TESTING_GUIDE.md) for exact actions. Use [
 
 ### Confirmed source-level gaps to fix
 
-- [ ] **P0:** Attendee CSV Route Handler checks STAFF role but omits verified/approved account-state checks. A rejected former Staff can retain STAFF role and obtain a restricted session after login; protect the handler itself and pass TC80 before review with real attendee data. This is source-inspection evidence; browser exploit reproduction has not been performed.
-- [ ] **P1 before gateway review:** CSV hardcodes USD and simulated-payment wording even for INR/Test Mode records. Make labels match stored currency/payment mode and pass TC81. Current Practice/USD export is the supported ordinary path.
+- [x] **P0 repaired:** Attendee CSV requires approved, verified, active Staff. Ineligible-account regression passed; full manual former-Staff TC80 remains separate.
+- [x] **P1 repaired:** Attendee CSV uses stored currency/payment-mode columns and spreadsheet-safe escaping. INR/Test Mode regression passed without provider payment calls; manual TC81 remains separate.
 
 ### Complete manual acceptance
 
@@ -67,15 +67,15 @@ Use [the manual testing guide](MANUAL_TESTING_GUIDE.md) for exact actions. Use [
 
 ## P1: workflow gaps and clarification
 
-- [ ] Correct stale interface guidance that says Staff can confirm email identity. Current OTP policy disables that bypass; references remain in event detail/My events and a defensive waitlist error. This is a confirmed copy mismatch, not permission to bypass verification.
-- [ ] Verify event dates across calendar, server-rendered labels, browser-local inputs and deployment timezone; standardize display if reviewers see inconsistent times.
-- [ ] Decide whether assigned volunteers should update their own tasks. Current board is read-only for Member/Treasurer; only Staff updates status. Member self-service requires new scoped authorization and tests.
-- [ ] Decide whether receipt uploads are required. Current workflow accepts optional HTTPS links; upload/storage/access controls are not implemented.
-- [ ] Decide whether finance needs date/category filters and downloadable semester statements. Current Treasurer page provides the ledger and per-currency summaries, not a dedicated report-export feature.
-- [ ] Decide whether merchandise needs replenishment/editing/cancellation/returns. Current UI adds variants, orders stock and records collection; it is not a complete stock-adjustment/return system.
+- [x] Corrected event/My events/waitlist guidance to require OTP verification and designated Staff role approval.
+- [x] Standardized operational display to campus timezone, default Asia/Kolkata. Timezone regression passed. Finance filter/export UTC is labelled explicitly. Full manual TC29 remains pending.
+- [x] Assigned volunteers update their own task status; Staff manages all tasks. Ownership/account-state checks passed; manual TC82 pending.
+- [x] Private PDF/PNG/JPEG receipt upload implemented with validation, claimant/Treasurer authorization, expense idempotency and cleanup. Real Storage/HTTP checks passed; full manual TC86–TC89 pending.
+- [x] Finance date/currency/category/status/type/search filters, 25-row pagination and filtered CSV implemented. Role/filter/date/export regression and INR browser filter passed; full manual TC85 pending.
+- [x] Staff merchandise replenishment/corrections implemented with audited quantity deltas and request keys. Role/concurrency/retry checks passed. Price editing, returns and order cancellation remain future work.
 - [ ] Add pagination/search if needed beyond the current latest-100 merchandise-order and notification views; validate attendee pagination with a larger isolated dataset.
-- [ ] Clarify public browsing behavior for signed-in pending users: protected layout currently redirects them to verification/approval despite Browse public events links. Agree on the intended policy before changing it.
-- [ ] Review double-submit/network-retry behavior for every create form. Supported idempotent decisions do not establish duplicate prevention for all record creation (notably new expenses/tasks/products/events).
+- [x] Pending/unverified accounts can browse public events; operational routes/registration remain gated. Manual regression TC90 pending.
+- [ ] Review remaining create-form retries for tasks/products/events/merchandise orders. Expense claims now use scoped submission keys and payload hashes; stock adjustments are idempotent. Not every create operation is idempotent.
 
 ## P1: payments — explicitly deferred
 
@@ -114,3 +114,12 @@ Payment execution is deliberately excluded from the current manual run. TC78 is 
 | 5     | Team                              | Accept baseline, then resume gateway work                                     | Baseline sign-off followed by payment-specific acceptance |
 
 These assignments do not imply the work has been completed by each person. Fixes should be separate, reviewable commits. Keep secrets and testing passwords out of Git.
+
+## Additional acceptance and release tasks
+
+- [x] One explicitly authorized real email reached the owner Inbox; application SENT, sent=1, failed=0; recipient confirmed receipt. TC91 passed. Registration/reset/reminder journeys are separate.
+- [x] Private database snapshot retained; additive operational PostgreSQL change recorded in skyline/prisma/changes/20261011-operational-features.sql; server-only table privileges applied.
+- [ ] Execute TC82–TC90 completely with browser/user-created test records and record results.
+- [ ] Rotate credentials exposed in chat, update ignored configuration and recheck connectivity. No credentials were committed or copied into docs.
+- [ ] Back up private Storage objects separately from database JSON; rehearse restoring receipt metadata and bytes together.
+- [ ] Add receipt orphan reconciliation/retention and malware scanning if required for production.

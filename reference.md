@@ -71,6 +71,7 @@ Skyline uses a top navigation bar on desktop and a fixed bottom bar on phones. F
 - Treasurer: Finance, Members, Events, Overview.
 
 Use **More** for the remaining permitted pages. Staff can reach Door check-in there; only the designated approving Staff account sees User access. My account, My updates and Sign out remain available in the header. More closes when a destination is selected, when clicking outside it, or with Escape. Existing server permission checks still protect restricted pages. Public visitors can browse Events and sign in.
+
 ## 2. What the application does
 
 Skyline brings membership, event registration, attendance, club merchandise, volunteer tasks, notices and financial records into one workspace. Its operational records come from the database and user actions. There is no automatic demo seed on startup.
@@ -79,28 +80,28 @@ Example: Staff creates a campus workshop, a Member registers and receives a QR t
 
 ## 3. Actual technology stack
 
-| Area | Technology in this repository | Purpose |
-| --- | --- | --- |
-| Application framework | Next.js 14 App Router | Pages, routing, server rendering and server operations in one application |
-| Frontend | React 18 and TypeScript 5 | Typed components, forms and interactive browser controls |
-| Styling | Tailwind CSS 3, custom CSS, PostCSS and Autoprefixer | Existing responsive club UI and glass-style panels |
-| Components | Project-specific club components, CVA, clsx, tailwind-merge | Consistent buttons, inputs, panels and styles |
-| Icons | Lucide React | Interface icons |
-| Backend | Next.js Server Actions and Route Handlers on Node.js | Authentication, validation, mutations, exports and job endpoints |
-| Database | Supabase-hosted PostgreSQL | Current persistent application data |
-| ORM | Prisma 6.19.3 | Typed queries, data models and transactions |
-| Input validation | Zod 3 and shared validation helpers | Server input constraints and structured errors |
-| Authentication | Custom database-backed cookie sessions | Identifies the signed-in user; this is not JWT or Supabase Auth |
-| Password protection | Node crypto scrypt with random salts | Stores password hashes instead of plain passwords |
-| Session protection | Random session tokens, SHA-256 hashes in database | Server-side expiry and revocation |
-| Authorization | Server role/account/ownership checks | Controls both routes and data-changing actions |
-| Email | Nodemailer through Gmail SMTP; optional Resend adapter | OTP, reset and queued notification email |
-| Email OTP | Cryptographic six-digit code, keyed digest | Verifies control of a registration email address |
-| QR display | qrcode.react | Renders ticket QR codes |
-| QR scanning | @zxing/browser | Reads QR codes using the browser camera |
-| Formatting and checks | Prettier 3, ESLint 8, TypeScript compiler | Consistent style, lint and type checks |
-| Version control | Git and GitHub | Local commits and remote collaboration |
-| Existing payment work | Razorpay integration code | Paused; not a completed live payment/refund workflow |
+| Area                  | Technology in this repository                               | Purpose                                                                   |
+| --------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Application framework | Next.js 14 App Router                                       | Pages, routing, server rendering and server operations in one application |
+| Frontend              | React 18 and TypeScript 5                                   | Typed components, forms and interactive browser controls                  |
+| Styling               | Tailwind CSS 3, custom CSS, PostCSS and Autoprefixer        | Existing responsive club UI and glass-style panels                        |
+| Components            | Project-specific club components, CVA, clsx, tailwind-merge | Consistent buttons, inputs, panels and styles                             |
+| Icons                 | Lucide React                                                | Interface icons                                                           |
+| Backend               | Next.js Server Actions and Route Handlers on Node.js        | Authentication, validation, mutations, exports and job endpoints          |
+| Database              | Supabase-hosted PostgreSQL                                  | Current persistent application data                                       |
+| ORM                   | Prisma 6.19.3                                               | Typed queries, data models and transactions                               |
+| Input validation      | Zod 3 and shared validation helpers                         | Server input constraints and structured errors                            |
+| Authentication        | Custom database-backed cookie sessions                      | Identifies the signed-in user; this is not JWT or Supabase Auth           |
+| Password protection   | Node crypto scrypt with random salts                        | Stores password hashes instead of plain passwords                         |
+| Session protection    | Random session tokens, SHA-256 hashes in database           | Server-side expiry and revocation                                         |
+| Authorization         | Server role/account/ownership checks                        | Controls both routes and data-changing actions                            |
+| Email                 | Nodemailer through Gmail SMTP; optional Resend adapter      | OTP, reset and queued notification email                                  |
+| Email OTP             | Cryptographic six-digit code, keyed digest                  | Verifies control of a registration email address                          |
+| QR display            | qrcode.react                                                | Renders ticket QR codes                                                   |
+| QR scanning           | @zxing/browser                                              | Reads QR codes using the browser camera                                   |
+| Formatting and checks | Prettier 3, ESLint 8, TypeScript compiler                   | Consistent style, lint and type checks                                    |
+| Version control       | Git and GitHub                                              | Local commits and remote collaboration                                    |
+| Existing payment work | Razorpay integration code                                   | Paused; not a completed live payment/refund workflow                      |
 
 There is no separate Express backend. Next.js runs frontend and backend as a modular monolith. The current UI does not require an external chart service or Odoo installation.
 
@@ -112,21 +113,21 @@ There is no separate Express backend. Next.js runs frontend and backend as a mod
 
 The local file is `E:\Odoo-apex-main\Odoo-apex-main\skyline\.env`.
 
-| Variable | Meaning |
-| --- | --- |
-| DATABASE_PROVIDER | `postgresql` for the current Supabase setup |
-| DATABASE_URL | Private database runtime connection string |
-| DIRECT_URL | Private schema-management connection string |
-| APP_URL | `http://localhost:3001` locally; used in application links |
-| EMAIL_PROVIDER | `smtp` for the current Gmail setup |
-| SMTP_HOST | `smtp.gmail.com` |
-| SMTP_PORT | `465` for the current encrypted connection |
-| SMTP_SECURE | `true` for port 465 |
-| SMTP_USER | Sending Gmail mailbox |
-| SMTP_PASSWORD | Google App Password; not the Skyline or ordinary Gmail password |
-| EMAIL_FROM | Sending address matching SMTP_USER for Gmail |
-| EMAIL_VERIFICATION_ENABLED | `true` in the current local setup |
-| OTP_SECRET | Private digest secret, at least 32 characters; keep stable |
+| Variable                   | Meaning                                                         |
+| -------------------------- | --------------------------------------------------------------- |
+| DATABASE_PROVIDER          | `postgresql` for the current Supabase setup                     |
+| DATABASE_URL               | Private database runtime connection string                      |
+| DIRECT_URL                 | Private schema-management connection string                     |
+| APP_URL                    | `http://localhost:3001` locally; used in application links      |
+| EMAIL_PROVIDER             | `smtp` for the current Gmail setup                              |
+| SMTP_HOST                  | `smtp.gmail.com`                                                |
+| SMTP_PORT                  | `465` for the current encrypted connection                      |
+| SMTP_SECURE                | `true` for port 465                                             |
+| SMTP_USER                  | Sending Gmail mailbox                                           |
+| SMTP_PASSWORD              | Google App Password; not the Skyline or ordinary Gmail password |
+| EMAIL_FROM                 | Sending address matching SMTP_USER for Gmail                    |
+| EMAIL_VERIFICATION_ENABLED | `true` in the current local setup                               |
+| OTP_SECRET                 | Private digest secret, at least 32 characters; keep stable      |
 
 Do not copy actual passwords, database strings, OTPs or API keys into this document, screenshots or commits. Other private variables may exist for existing background jobs and paused payment code; preserve them.
 
@@ -134,11 +135,11 @@ As of this update, SMTP connection, TLS and authentication passed `npm run email
 
 ## 5. Roles and initial users
 
-| Role | Initial email | Login destination | Main responsibilities |
-| --- | --- | --- | --- |
-| Member / Student | maheshwaranpalanisamy1@gmail.com | `/my-events` | Own registrations/tickets, event browsing, club shop, own expense requests, account and updates |
-| Staff | balajivasun@gmail.com | `/` | Events and attendee management, door check-in, inventory, volunteer tasks, notices and membership operations |
-| Treasurer | smohamedanas02@gmail.com | `/treasurer` | Ledger and expense decisions, membership/dues operations, currency-separated financial visibility |
+| Role             | Initial email                    | Login destination | Main responsibilities                                                                                        |
+| ---------------- | -------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| Member / Student | maheshwaranpalanisamy1@gmail.com | `/my-events`      | Own registrations/tickets, event browsing, club shop, own expense requests, account and updates              |
+| Staff            | balajivasun@gmail.com            | `/`               | Events and attendee management, door check-in, inventory, volunteer tasks, notices and membership operations |
+| Treasurer        | smohamedanas02@gmail.com         | `/treasurer`      | Ledger and expense decisions, membership/dues operations, currency-separated financial visibility            |
 
 Passwords were supplied privately and are intentionally omitted. The three initial users are already approved and administratively email-verified.
 
@@ -244,30 +245,30 @@ Camera permission requires HTTPS or localhost. A phone opening the computer's LA
 
 Dynamic bracket segments mean a real database ID, not a literal URL segment to type.
 
-| Route | Purpose / restriction |
-| --- | --- |
-| `/login` | Sign in |
-| `/register` | New identity and requested role |
-| `/verify-email` | Session-bound OTP verification |
-| `/access-status` | Pending/rejected approval feedback |
-| `/access-denied` | Insufficient permission feedback |
-| `/forgot-password`, `/reset-password` | Account recovery; email arrival needs live verification |
-| `/` | Shared club overview; Staff's landing page |
-| `/events`, `/events/[eventId]` | Browse events and permitted registration actions |
-| `/my-events` | Own registrations and waitlist activity |
-| `/tickets/[ticketId]` | Own ticket; Staff support access |
-| `/events/[eventId]/manage` | Staff attendee/event management |
-| `/events/check-in` | Staff door desk |
-| `/members` | Staff and Treasurer membership operations |
-| `/merchandise` | Catalog/orders; Staff inventory controls, Treasurer cannot place shop orders |
-| `/fundraisers` | Volunteer board; Staff task controls |
-| `/treasurer` | Treasurer financial desk |
-| `/announcements` | Club noticeboard; Staff/Treasurer publication controls |
-| `/notifications` | Personal updates |
-| `/account` | Account preferences and own expense requests |
-| `/admin/users` | Designated Staff role approver only |
-| `/payments`, `/payments/[paymentId]` | Existing personal payment screens; payment work paused |
-| `/admin/payments` | Existing Staff/Treasurer test payment desk; payment work paused |
+| Route                                 | Purpose / restriction                                                        |
+| ------------------------------------- | ---------------------------------------------------------------------------- |
+| `/login`                              | Sign in                                                                      |
+| `/register`                           | New identity and requested role                                              |
+| `/verify-email`                       | Session-bound OTP verification                                               |
+| `/access-status`                      | Pending/rejected approval feedback                                           |
+| `/access-denied`                      | Insufficient permission feedback                                             |
+| `/forgot-password`, `/reset-password` | Account recovery; email arrival needs live verification                      |
+| `/`                                   | Shared club overview; Staff's landing page                                   |
+| `/events`, `/events/[eventId]`        | Browse events and permitted registration actions                             |
+| `/my-events`                          | Own registrations and waitlist activity                                      |
+| `/tickets/[ticketId]`                 | Own ticket; Staff support access                                             |
+| `/events/[eventId]/manage`            | Staff attendee/event management                                              |
+| `/events/check-in`                    | Staff door desk                                                              |
+| `/members`                            | Staff and Treasurer membership operations                                    |
+| `/merchandise`                        | Catalog/orders; Staff inventory controls, Treasurer cannot place shop orders |
+| `/fundraisers`                        | Volunteer board; Staff task controls                                         |
+| `/treasurer`                          | Treasurer financial desk                                                     |
+| `/announcements`                      | Club noticeboard; Staff/Treasurer publication controls                       |
+| `/notifications`                      | Personal updates                                                             |
+| `/account`                            | Account preferences and own expense requests                                 |
+| `/admin/users`                        | Designated Staff role approver only                                          |
+| `/payments`, `/payments/[paymentId]`  | Existing personal payment screens; payment work paused                       |
+| `/admin/payments`                     | Existing Staff/Treasurer test payment desk; payment work paused              |
 
 Calendar/attendee export Route Handlers, event jobs and the existing Razorpay webhook are server endpoints, not extra sidebar screens. Unknown routes render the application's not-found screen. Navigation visibility alone is not authorization: protected server operations also check access.
 
@@ -305,20 +306,20 @@ These scripts create scoped temporary records in the configured database and cle
 
 ## 10. Common startup problems
 
-| Symptom | Action |
-| --- | --- |
-| Prisma Client did not initialize | Run `npm run db:generate` from `skyline`, then restart |
-| Missing packages | Stop server and run `npm ci` |
-| Port 3001 already in use | Stop the previous Skyline server with Ctrl+C |
-| Database unreachable | Check private connection settings, internet and Supabase availability |
-| SMTP authentication fails | Check sender account and Google App Password; do not use the application password |
-| OTP does not arrive | Check inbox/spam, provider configuration, latest OTP challenge and delivery feedback; resend after cooldown |
-| Verified user still pending | Balaji must approve the requested role |
-| Same account in several tabs | Tabs share cookies; use separate browser sessions or sign out |
-| Member cannot enter finance/admin pages | Expected role restriction |
-| Treasurer cannot decide own expense | Expected self-review protection; use another approved Treasurer |
-| Duplicate QR rejected | Expected one-entry ticket protection |
-| Empty event/store/ledger screen | Create real operational data; demo seeding is deliberately disabled |
+| Symptom                                 | Action                                                                                                      |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Prisma Client did not initialize        | Run `npm run db:generate` from `skyline`, then restart                                                      |
+| Missing packages                        | Stop server and run `npm ci`                                                                                |
+| Port 3001 already in use                | Stop the previous Skyline server with Ctrl+C                                                                |
+| Database unreachable                    | Check private connection settings, internet and Supabase availability                                       |
+| SMTP authentication fails               | Check sender account and Google App Password; do not use the application password                           |
+| OTP does not arrive                     | Check inbox/spam, provider configuration, latest OTP challenge and delivery feedback; resend after cooldown |
+| Verified user still pending             | Balaji must approve the requested role                                                                      |
+| Same account in several tabs            | Tabs share cookies; use separate browser sessions or sign out                                               |
+| Member cannot enter finance/admin pages | Expected role restriction                                                                                   |
+| Treasurer cannot decide own expense     | Expected self-review protection; use another approved Treasurer                                             |
+| Duplicate QR rejected                   | Expected one-entry ticket protection                                                                        |
+| Empty event/store/ledger screen         | Create real operational data; demo seeding is deliberately disabled                                         |
 
 ## 11. What is verified and what remains
 
@@ -349,7 +350,6 @@ Team responsibility mapping: frontend — maheshwaran6953; backend — KishorePr
 
 Related guides: `docs/LOCAL_RUNBOOK.md`, `docs/EMAIL_VERIFICATION.md`, `docs/MASTER_REPAIR_PLAN.md`, and `docs/REPAIR_VERIFICATION.md`. This reference records the newer successful SMTP handshake; older guide status paragraphs may still describe the earlier pending setup.
 
-
 ## 13. Original problem-statement coverage update
 
 See [Problem Statement Coverage and Technology Stack](docs/PROBLEM_STATEMENT_TECH_STACK.md) for the six original semester scenarios and their exact implementation/evidence.
@@ -357,3 +357,11 @@ See [Problem Statement Coverage and Technology Stack](docs/PROBLEM_STATEMENT_TEC
 The latest audit adds dues setup, 30-day renewal reminders, early renewal preserving paid time, announcement notifications and queued mailing, active-membership shop prices, personal/Staff order collection history, fundraiser income entry and optional safe HTTPS receipt links. Existing UI styles are preserved. Start the worker for scheduled renewals and notice mailing. The shop remains a practice ordering flow and payment work remains paused.
 
 Run `npm run verify:basics` for the new scoped checks; it sends no real provider email and cleans its own temporary records. SMTP authentication has passed, but inbox delivery needs confirmation.
+
+## Operational additions — 11 October 2026
+
+Assigned volunteers update only their own status; Staff receives/corrects stock with audit records; Treasurer filters/exports finance; expense claims support private Supabase Storage files (PDF/PNG/JPEG, max 2 MB) and idempotent submission. See the repository docs/OPERATIONAL_FEATURES.md for full instructions.
+
+Setup: npm run storage:setup after privately configuring SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SUPABASE_RECEIPTS_BUCKET. Verification: npm run verify:operations; npm run verify:receipts -- --base-url http://localhost:3001. The latter explicitly creates/removes a real temporary receipt and requires a running app. Never publish server keys.
+
+Ordinary startup remains npm run dev -- --port 3001; do not reset or seed current data. One authorized email reached Inbox. Full manual coverage is 91 cases; service success does not imply all browser/device/provider acceptance is complete. Payments remain paused.

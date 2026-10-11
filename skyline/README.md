@@ -66,3 +66,11 @@ npm run build
 ```
 
 Scoped service checks: `verify:basics`, `verify:events`, `verify:finance`, `verify:otp`, `verify:email`. They create/clean temporary fixtures; simulated email checks do not prove inbox delivery. See [repair verification](../docs/REPAIR_VERIFICATION.md) for current evidence and [the repository README](../README.md#verification-and-current-limits) for remaining release work.
+
+## Operational additions — 11 October 2026
+
+Assigned volunteers update only their own status; Staff receives/corrects stock with audit records; Treasurer filters/exports finance; expense claims support private Supabase Storage files (PDF/PNG/JPEG, max 2 MB) and idempotent submission. See the repository docs/OPERATIONAL_FEATURES.md for full instructions.
+
+Setup: npm run storage:setup after privately configuring SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SUPABASE_RECEIPTS_BUCKET. Verification: npm run verify:operations; npm run verify:receipts -- --base-url http://localhost:3001. The latter explicitly creates/removes a real temporary receipt and requires a running app. Never publish server keys.
+
+Ordinary startup remains npm run dev -- --port 3001; do not reset or seed current data. One authorized email reached Inbox. Full manual coverage is 91 cases; service success does not imply all browser/device/provider acceptance is complete. Payments remain paused.

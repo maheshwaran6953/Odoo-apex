@@ -16,6 +16,7 @@ Versions below are resolved in [`skyline/package-lock.json`](skyline/package-loc
 | Icons and style helpers  | **Lucide React 0.468.0**, CVA, clsx, tailwind-merge         | Icons and reusable component styling                                                         |
 | Backend                  | **Node.js**, Next.js Server Actions and Route Handlers      | Domain rules, mutations, exports and protected job endpoints                                 |
 | Database                 | **Supabase-hosted PostgreSQL**                              | Persistent accounts, memberships, events, tickets, orders, tasks and ledger records          |
+| Receipt files            | **Supabase Storage**, **@supabase/supabase-js 2.117.3**     | Private uploads and authorized claimant/Treasurer downloads                                  |
 | ORM                      | **Prisma / Prisma Client 6.19.3**                           | Typed queries, transactions and conditional updates                                          |
 | Validation               | **Zod 3.25.76**, shared validation helpers                  | Input bounds, dates, quantities, email and monetary values                                   |
 | Authentication           | Custom database-backed opaque cookie sessions               | Login, session expiry and revocation; session tokens are hashed with SHA-256 in the database |
@@ -72,7 +73,7 @@ Business records are entered through the application and stored in the database.
 | Merchandise       | Size/quantity selection, stock decrement, active-member pricing, owned order history and Staff collection recording                       | Practice order/payment records; no online shop payment collection or shipping integration                                  |
 | Volunteers        | Staff task creation, assignments, deadlines and TODO / DOING / DONE progress tracking                                                     | Volunteers are participants in the task workflow, not a separate authentication role                                       |
 | Announcements     | Dated notice archive, personal notification fan-out and opted-in email queue                                                              | Background delivery and actual recipient inbox receipt must be verified                                                    |
-| Finance           | Dues/ticket/merchandise/fundraiser categories, expense requests, Treasurer review and currency-separated balances                         | Approval records an expense, not a bank payout; receipt links are supported, file uploads are not                          |
+| Finance           | Dues/ticket/merchandise/fundraiser categories, expense requests, Treasurer review and currency-separated balances                         | Approval records an expense, not a bank payout; private files and HTTPS links are supported                                |
 
 ### Roles and access
 
@@ -231,17 +232,17 @@ npm run build
 
 The latest implementation checks passed. Service verification commands are `verify:basics`, `verify:events`, `verify:finance`, `verify:otp` and `verify:email`. These create scoped temporary records in the configured database and clean their exact fixtures; prefer an isolated test database for repeated checks. `verify:email` uses simulated delivery and does not establish real inbox arrival.
 
-- Gmail SMTP connection/TLS/authentication passed `npm run email:check`; real OTP, notice and reminder inbox delivery remains unverified.
+- Gmail SMTP connection/TLS/authentication passed `npm run email:check`; one authorized test email reached Inbox; registration OTP, reset and reminder journeys still need their own acceptance.
 - Razorpay work is paused. Public webhook delivery and refunds remain unresolved; real online collection, shop payment and bank payouts are not complete.
 - Physical QR-camera/device acceptance and a verified public deployment remain pending. Camera access requires HTTPS or localhost.
-- Receipt metadata uses optional validated HTTPS links, not file uploads or Supabase Storage.
+- Private receipts use Supabase Storage (PDF/PNG/JPEG, max 2 MB) and authorized claimant/Treasurer downloads. Validated external HTTPS links remain optional; do not supply both.
 - Existing Next.js 14/Prisma dependency advisories require a deliberate supported-version upgrade before public production release. Versioned migrations, backup restore rehearsal and deployment-specific abuse protection also remain hardening work.
 
-See [repair verification](docs/REPAIR_VERIFICATION.md) for completed checks and boundaries. No UI, schema or application behavior is changed by this README update.
+See [repair verification](docs/REPAIR_VERIFICATION.md) for completed checks and boundaries. Exact usage of the new controls is in [operational features](docs/OPERATIONAL_FEATURES.md).
 
 ## Completion and manual acceptance
 
-Use [the completion checklist](docs/COMPLETION_CHECKLIST.md) for remaining work and [the manual testing guide](docs/MANUAL_TESTING_GUIDE.md) for 81 numbered cases covering current workflows, permissions, edge cases and external acceptance. Record executed results in [the test log](docs/MANUAL_TEST_RESULTS.md); creating these documents does not mean the tests passed. The checklist includes newly identified attendee-export account-state and currency-label gaps that still need fixes. Gateway execution remains deferred.
+Use [the completion checklist](docs/COMPLETION_CHECKLIST.md) for remaining work and [the manual testing guide](docs/MANUAL_TESTING_GUIDE.md) for 91 numbered cases covering current workflows, permissions, edge cases and external acceptance. Record executed results in [the test log](docs/MANUAL_TEST_RESULTS.md); creating these documents does not mean the tests passed. Attendee-export account-state/currency repairs and operational enhancements are implemented; the checklist separates service results from incomplete manual/production gates. Gateway execution remains deferred.
 
 ## Further documentation
 
@@ -253,3 +254,16 @@ Use [the completion checklist](docs/COMPLETION_CHECKLIST.md) for remaining work 
 - [Payment documentation](docs/PAYMENTS.md): existing paused Test Mode integration.
 
 Older planning/review documents record previous states. Use this README, the local reference and repair verification for the current implementation.
+
+## New operational controls
+
+- Assigned volunteers update only their own task status; Staff manages all tasks.
+- Treasurer filters dates, currency, category, status, type and description; CSV includes all matching entries up to 10,000. Table pagination uses 25 rows.
+- Staff receives/corrects merchandise stock with audited quantity deltas and retry protection.
+- Expense claims accept a private PDF, PNG or JPEG up to 2 MB; uploaded receipts download only to the claimant or approved Treasurer. Identical submission retries cannot create another claim.
+- Campus timestamps default to Asia/Kolkata; finance date filters and CSV timestamps use labelled UTC.
+- Pending/unverified accounts can browse public events; operational actions remain protected.
+
+Run npm run storage:setup after privately configuring SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SUPABASE_RECEIPTS_BUCKET. Never expose server keys in NEXT_PUBLIC variables. Bucket setup and real upload/download/HTTP authorization checks passed.
+
+See [the operational guide](docs/OPERATIONAL_FEATURES.md) and manual cases TC82–TC91. New checks: npm run verify:operations; npm run verify:receipts -- --base-url http://localhost:3001 (explicit real temporary upload, requires the running app). Payment work remains paused.

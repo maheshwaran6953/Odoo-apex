@@ -26,11 +26,16 @@
     "verify:finance": "tsx scripts/verify-finance.ts --temporary-fixtures",
     "email:check": "tsx scripts/check-email.ts",
     "verify:email": "tsx scripts/verify-email-delivery.ts --temporary-fixtures",
-    "verify:basics": "tsx scripts/verify-basics.ts --temporary-fixtures"
+    "verify:basics": "tsx scripts/verify-basics.ts --temporary-fixtures",
+    "storage:setup": "tsx scripts/setup-receipts.ts",
+    "email:acceptance": "tsx scripts/send-acceptance-email.ts",
+    "verify:operations": "tsx scripts/verify-operations.ts --temporary-fixtures",
+    "verify:receipts": "tsx scripts/verify-receipt-storage.ts --real-storage --temporary-fixtures"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "@prisma/fetch-engine": "6.19.3",
+    "@supabase/supabase-js": "2.117.3",
     "@zxing/browser": "^0.1.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

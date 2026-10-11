@@ -11,6 +11,7 @@ const models = [
   "user",
   "event",
   "inventoryItem",
+  "inventoryMovement",
   "transaction",
   "ticket",
   "merchandiseOrder",
@@ -87,6 +88,7 @@ async function main() {
       );
     const snapshot = JSON.parse(readFileSync(file, "utf8"));
     for (const optional of [
+      "inventoryMovement",
       "session",
       "accountToken",
       "loginAttempt",

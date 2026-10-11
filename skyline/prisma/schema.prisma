@@ -248,6 +248,7 @@ model InventoryItem {
   memberPriceCents Int?
   stock Int
   orderLines MerchandiseOrderLine[]
+  movements InventoryMovement[]
 }
 model MerchandiseOrder {
   userId String?
@@ -290,6 +291,12 @@ model Transaction {
   amountCents Int
   memberId String?
   receiptUrl String?
+  receiptPath String?
+  receiptName String?
+  receiptMime String?
+  receiptBytes Int?
+  requestKey String? @unique
+  requestHash String?
   status String @default("posted")
   currency String @default("USD")
   member Member? @relation(fields: [memberId], references: [id])
@@ -312,4 +319,18 @@ model EmailOtp {
  requestedAt DateTime @default(now())
  requestCount Int @default(1)
  windowStartedAt DateTime @default(now())
+}
+
+model InventoryMovement {
+  id String @id @default(cuid())
+  itemId String
+  item InventoryItem @relation(fields: [itemId], references: [id])
+  actorId String
+  delta Int
+  beforeStock Int
+  afterStock Int
+  reason String
+  requestKey String @unique
+  createdAt DateTime @default(now())
+  @@index([itemId, createdAt])
 }

@@ -7,8 +7,10 @@ const appRoot = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   distDir: process.env.SKYLINE_DIST_DIR || ".next",
   experimental: {
+    // Bound build workers so local compilation fits developer laptops.
+    cpus: 1,
     outputFileTracingRoot: appRoot,
-    serverActions: { bodySizeLimit: "2mb" },
+    serverActions: { bodySizeLimit: "3mb" },
   },
   webpack: (config) => {
     config.resolve.alias["@"] = path.join(appRoot, "src");

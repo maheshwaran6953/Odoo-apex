@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { adjustInventoryStock } from "@/server/operations-service";
 import { db } from "@/lib/db";
 import { merchandiseOrderSchema } from "@/lib/validators";
 import { requireRole, requireUser } from "@/server/auth";
@@ -92,4 +93,31 @@ export async function addInventoryItem(form: FormData) {
   const { revalidatePath } = await import("next/cache");
   revalidatePath("/merchandise");
   return { ok: true, message: "Inventory item added." };
+}
+
+export async function adjustStock(form: FormData) {
+  const actor = await requireUser();
+  const raw = String(form.get("delta") || "").trim();
+  if (!/^-?\d{1,7}$/.test(raw))
+    return { ok: false, message: "Enter a nonzero whole quantity change." };
+  try {
+    const result = await adjustInventoryStock(
+      actor.id,
+      String(form.get("itemId") || ""),
+      Number(raw),
+      String(form.get("reason") || ""),
+      String(form.get("requestKey") || ""),
+    );
+    revalidatePath("/merchandise");
+    revalidatePath("/");
+    return result;
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Could not adjust stock. Refresh and retry.",
+    };
+  }
 }

@@ -1,10 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireRole } from "@/server/auth";
+import { requireRole, requireUser } from "@/server/auth";
+import { updateVolunteerTask } from "@/server/operations-service";
 import { validName } from "@/lib/validation";
 export async function moveTask(input: unknown) {
-  await requireRole(["STAFF"]);
+  const user = await requireUser();
   const data =
     input instanceof FormData
       ? { taskId: input.get("taskId"), status: input.get("status") }
@@ -13,24 +14,16 @@ export async function moveTask(input: unknown) {
     !data ||
     typeof data !== "object" ||
     !("taskId" in data) ||
-    !("status" in data) ||
-    typeof data.taskId !== "string" ||
-    !data.taskId.trim() ||
-    !["TODO", "DOING", "DONE"].includes(String(data.status))
+    !("status" in data)
   )
     return { ok: false, message: "Choose a valid task and status." };
   try {
-    const changed = await db.task.updateMany({
-      where: { id: data.taskId },
-      data: { status: data.status as "TODO" | "DOING" | "DONE" },
-    });
-    if (changed.count) {
+    const result = await updateVolunteerTask(user.id, data.taskId, data.status);
+    if (result.ok) {
       revalidatePath("/fundraisers");
       revalidatePath("/");
     }
-    return changed.count
-      ? { ok: true, message: "Task status updated on the board." }
-      : { ok: false, message: "This task no longer exists." };
+    return result;
   } catch {
     return { ok: false, message: "Unable to update this task. Try again." };
   }

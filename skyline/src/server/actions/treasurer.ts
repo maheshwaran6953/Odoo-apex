@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db } from "@/lib/db";
+import { submitExpense } from "@/server/expense-service";
 import { requireRole, requireUser } from "@/server/auth";
-import { receiptLink, recordFundraiserIncome } from "@/server/club-service";
+import { recordFundraiserIncome } from "@/server/club-service";
 
 import {
   parseExpenseAmount,
@@ -11,79 +11,41 @@ import {
 } from "@/server/finance-service";
 
 export async function createExpense(input: unknown) {
-  await requireRole(["MEMBER", "STAFF", "TREASURER"]);
   const user = await requireUser();
-  const data =
-    input instanceof FormData
-      ? {
-          description: input.get("description"),
-          amountCents: parseExpenseAmount(input.get("amount")),
-          currency: input.get("currency"),
-          receiptUrl: input.get("receiptUrl"),
-        }
-      : input && typeof input === "object"
-        ? (input as {
-            description?: unknown;
-            amountCents?: unknown;
-            currency?: unknown;
-            receiptUrl?: unknown;
-          })
-        : {};
-  const description =
-    typeof data.description === "string" ? data.description.trim() : "";
-  const currency = data.currency ?? "USD";
-  const receiptUrl = receiptLink(data.receiptUrl);
-  if (receiptUrl === undefined)
+  if (!(input instanceof FormData))
+    return { ok: false, message: "Submit the expense using the form." };
+  const rawFile = input.get("receiptFile");
+  if (typeof rawFile === "string" && rawFile.trim())
     return {
       ok: false,
-      message:
-        "Use an HTTPS receipt link up to 2,000 characters without embedded credentials, or leave it empty.",
+      message: "Choose the receipt using the file selector.",
     };
-  if (
-    description.length < 3 ||
-    description.length > 200 ||
-    /[\u0000-\u001f\u007f]/.test(description)
-  ) {
+  const file =
+    rawFile && typeof rawFile !== "string" && (rawFile.name || rawFile.size > 0)
+      ? rawFile
+      : null;
+  try {
+    const result = await submitExpense(user.id, {
+      description: input.get("description"),
+      amountCents: parseExpenseAmount(input.get("amount")),
+      currency: input.get("currency"),
+      receiptUrl: input.get("receiptUrl"),
+      requestKey: input.get("requestKey"),
+      file,
+    });
+    revalidatePath("/account");
+    revalidatePath("/treasurer");
+    return result;
+  } catch (error) {
     return {
       ok: false,
       message:
-        "Describe the expense using 3–200 characters without control characters.",
+        error instanceof Error
+          ? error.message
+          : "Could not submit this expense. Try again.",
     };
   }
-  if (
-    typeof data.amountCents !== "number" ||
-    !Number.isSafeInteger(data.amountCents) ||
-    data.amountCents < 1 ||
-    data.amountCents > 10_000_000 ||
-    typeof currency !== "string" ||
-    !["USD", "INR"].includes(currency)
-  ) {
-    return {
-      ok: false,
-      message:
-        "Choose USD or INR and enter a positive amount up to 100,000 with at most two decimal places.",
-    };
-  }
-  await db.transaction.create({
-    data: {
-      type: "EXPENSE",
-      category: "REIMBURSEMENT",
-      description,
-      amountCents: data.amountCents,
-      currency: String(currency),
-      claimantId: user.id,
-      receiptUrl,
-      status: "pending",
-    },
-  });
-  revalidatePath("/account");
-  revalidatePath("/treasurer");
-  return {
-    ok: true,
-    message: "Expense submitted for review. No money has been transferred.",
-  };
 }
-
 async function reviewExpense(
   id: string,
   decision: "posted" | "rejected",

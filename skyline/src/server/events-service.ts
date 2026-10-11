@@ -237,7 +237,7 @@ export async function registerAttendee(
     user.approvalStatus !== "APPROVED"
   )
     throw new Error(
-      "Verify your email before registering. Club staff can also confirm your identity.",
+      "Verify your email with OTP and obtain Staff role approval before registering.",
     );
   const previous = await tx.ticket.findUnique({
     where: { eventId_userId: { eventId, userId } },

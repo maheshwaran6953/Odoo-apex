@@ -61,7 +61,7 @@ export async function joinWaitlist(data: FormData) {
     return {
       ok: false,
       message:
-        "Verify your email or ask staff to confirm your identity before joining.",
+        "Verify your email with OTP and obtain Staff role approval before joining.",
     };
   const eventId = String(data.get("eventId") || "");
   try {

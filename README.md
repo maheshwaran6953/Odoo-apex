@@ -239,6 +239,10 @@ The latest implementation checks passed. Service verification commands are `veri
 
 See [repair verification](docs/REPAIR_VERIFICATION.md) for completed checks and boundaries. No UI, schema or application behavior is changed by this README update.
 
+## Completion and manual acceptance
+
+Use [the completion checklist](docs/COMPLETION_CHECKLIST.md) for remaining work and [the manual testing guide](docs/MANUAL_TESTING_GUIDE.md) for 81 numbered cases covering current workflows, permissions, edge cases and external acceptance. Record executed results in [the test log](docs/MANUAL_TEST_RESULTS.md); creating these documents does not mean the tests passed. The checklist includes newly identified attendee-export account-state and currency-label gaps that still need fixes. Gateway execution remains deferred.
+
 ## Further documentation
 
 - [Local reference](reference.md): run commands, actual stack, roles and end-to-end flows.

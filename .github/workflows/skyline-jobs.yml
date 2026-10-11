@@ -1,0 +1,29 @@
+name: Skyline scheduled updates
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: skyline-event-jobs
+  cancel-in-progress: false
+jobs:
+  updates:
+    if: vars.SKYLINE_SCHEDULER_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Process reminders and queued emails
+        env:
+          SKYLINE_APP_URL: ${{ vars.SKYLINE_APP_URL }}
+          CRON_SECRET: ${{ secrets.SKYLINE_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$CRON_SECRET" || "$SKYLINE_APP_URL" != https://* ]]; then
+            echo "Configure HTTPS SKYLINE_APP_URL and SKYLINE_CRON_SECRET."
+            exit 1
+          fi
+          curl --silent --show-error --fail-with-body --max-time 310 \
+            --request POST \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "$SKYLINE_APP_URL/api/jobs/events"

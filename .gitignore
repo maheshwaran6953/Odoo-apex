@@ -16,3 +16,6 @@ skyline/prisma/server-only.generated.sql
 
 # Accidental npm invocation at archive root; app lockfile remains tracked.
 /package-lock.json
+
+# Hosting CLI local identity and cache
+.vercel/

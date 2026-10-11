@@ -546,9 +546,11 @@ export async function cancelEvent(data: FormData) {
 export async function runEventUpdates() {
   await requireRole(["STAFF"]);
   await processEventUpdates();
+  const { processMembershipUpdates } = await import("@/server/club-service");
+  await processMembershipUpdates();
   return {
     ok: true,
     message:
-      "Waitlist offers refreshed and due event reminders saved. Email delivery is a separate step.",
+      "Waitlist offers refreshed and due event/membership reminders saved. Email delivery is a separate step.",
   };
 }

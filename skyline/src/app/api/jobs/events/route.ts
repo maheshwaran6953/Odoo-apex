@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { processEventUpdates } from "@/server/events-service";
 import { deliverQueuedEmail } from "@/server/email";
 import { processPaymentUpdates } from "@/server/payments-service";
+import { processMembershipUpdates } from "@/server/club-service";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   await processPaymentUpdates();
   await processEventUpdates();
+  await processMembershipUpdates();
   const email = await deliverQueuedEmail();
   return Response.json({ processed: true, email });
 }

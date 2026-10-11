@@ -5,10 +5,13 @@ async function main() {
   const { deliverQueuedEmail } = await import("../src/server/email");
   const { processPaymentUpdates } =
     await import("../src/server/payments-service");
+  const { processMembershipUpdates } =
+    await import("../src/server/club-service");
   do {
     try {
       await processPaymentUpdates();
       await processEventUpdates();
+      await processMembershipUpdates();
       const email = await deliverQueuedEmail();
       console.log(
         `${new Date().toISOString()} Event jobs complete. Email: ${email.configured ? `${email.sent} sent, ${email.failed} failed` : "not configured; messages remain queued"}.`,

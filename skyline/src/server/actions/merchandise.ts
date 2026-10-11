@@ -1,83 +1,56 @@
 "use server";
-
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { merchandiseOrderSchema } from "@/lib/validators";
 import { requireRole, requireUser } from "@/server/auth";
+import { orderClubMerchandise, fulfillClubOrder } from "@/server/club-service";
 export async function createMerchandiseOrder(input: unknown) {
   await requireRole(["MEMBER", "STAFF"]);
   const actor = await requireUser();
   if (input instanceof FormData)
-    input = {
-      itemId: input.get("itemId"),
-      quantity: input.get("quantity") ?? 1,
-      memberId: input.get("memberId") || undefined,
-    };
+    input = { itemId: input.get("itemId"), quantity: input.get("quantity") };
   const parsed = merchandiseOrderSchema.safeParse(input);
   if (!parsed.success)
     return {
       ok: false,
-      message: "Choose a product and a whole-number quantity.",
+      message: "Choose a product and a whole quantity from 1 to 10.",
     };
-  const { itemId, quantity } = parsed.data;
-  const memberId = actor.memberId ?? undefined;
   try {
-    await db.$transaction(async (tx) => {
-      const item = await tx.inventoryItem.findUnique({ where: { id: itemId } });
-      if (!item) throw new Error("This product is no longer available.");
-      const updated = await tx.inventoryItem.updateMany({
-        where: { id: itemId, stock: { gte: quantity } },
-        data: { stock: { decrement: quantity } },
-      });
-      if (updated.count !== 1)
-        throw new Error(
-          `Only ${item.stock} available in this size. Please adjust your quantity.`,
-        );
-      const totalCents = item.priceCents * quantity;
-      if (
-        !Number.isSafeInteger(totalCents) ||
-        totalCents < 0 ||
-        totalCents > 2147483647
-      )
-        throw new Error(
-          "This product price cannot be processed. Contact staff.",
-        );
-      const order = await tx.merchandiseOrder.create({
-        data: {
-          userId: actor.id,
-          memberId,
-          status: "PAID",
-          totalCents,
-          lines: {
-            create: { itemId, quantity, unitPriceCents: item.priceCents },
-          },
-        },
-      });
-      await tx.transaction.create({
-        data: {
-          type: "INCOME",
-          category: "MERCHANDISE",
-          description: `${quantity} × ${item.name} (${item.size ?? "One size"}) · ${order.id.slice(-6)}`,
-          amountCents: totalCents,
-          memberId,
-        },
-      });
-    });
-
-    return {
-      ok: true,
-      message: "Club order recorded. Stock and ledger are updated.",
-    };
+    const result = await orderClubMerchandise(
+      actor.id,
+      parsed.data.itemId,
+      parsed.data.quantity,
+    );
+    for (const path of ["/merchandise", "/treasurer", "/"])
+      revalidatePath(path);
+    return result;
   } catch (error) {
     return {
       ok: false,
       message:
         error instanceof Error && !error.name.startsWith("Prisma")
           ? error.message
-          : "Unable to place your order.",
+          : "Unable to place this order. Refresh and try again.",
     };
   }
 }
-
+export async function fulfillMerchandiseOrder(orderId: string) {
+  await requireRole(["STAFF"]);
+  const actor = await requireUser();
+  if (typeof orderId !== "string" || !orderId)
+    return { ok: false, message: "Choose an order." };
+  try {
+    const result = await fulfillClubOrder(actor.id, orderId);
+    revalidatePath("/merchandise");
+    revalidatePath("/notifications");
+    return result;
+  } catch {
+    return {
+      ok: false,
+      message: "Unable to record collection. Refresh and try again.",
+    };
+  }
+}
 export async function addInventoryItem(form: FormData) {
   await requireRole(["STAFF"]);
   const name = String(form.get("name") || "").trim(),
@@ -86,6 +59,10 @@ export async function addInventoryItem(form: FormData) {
     priceText = String(form.get("price") || "");
   const { moneyCents, validName } = await import("@/lib/validation");
   const priceCents = moneyCents(priceText, true);
+  const memberPriceText = String(form.get("memberPrice") || "").trim();
+  const memberPriceCents = memberPriceText
+    ? moneyCents(memberPriceText, true)
+    : null;
   if (
     !String(form.get("category") || "").trim() ||
     String(form.get("category") || "").trim().length > 60 ||
@@ -93,12 +70,14 @@ export async function addInventoryItem(form: FormData) {
     size.length > 20 ||
     !/^\d{1,7}$/.test(stockText) ||
     Number(stockText) > 1000000 ||
-    priceCents === null
+    priceCents === null ||
+    (memberPriceText !== "" &&
+      (memberPriceCents === null || memberPriceCents > priceCents))
   )
     return {
       ok: false,
       message:
-        "Enter a name, optional size, nonnegative whole stock up to 1,000,000 and a valid USD price.",
+        "Enter a name, optional size, nonnegative whole stock up to 1,000,000 and a valid USD price. An optional member price must not exceed the regular price.",
     };
   await db.inventoryItem.create({
     data: {
@@ -107,6 +86,7 @@ export async function addInventoryItem(form: FormData) {
       size: size || null,
       stock: Number(stockText),
       priceCents,
+      memberPriceCents,
     },
   });
   const { revalidatePath } = await import("next/cache");

@@ -37,6 +37,37 @@ export async function deliverQueuedEmail(
         !otp ||
         otp.expiresAt <= new Date() ||
         row.key !== `otp:${otp.userId}:${otp.requestedAt.toISOString()}`;
+    } else if (row.key.startsWith("membership:")) {
+      const [, membershipId, expiry, stage] = row.key.split(":");
+      const membership = await db.membership.findUnique({
+        where: { id: membershipId },
+        include: { member: { include: { user: true } } },
+      });
+      const user = membership?.member.user;
+      obsolete =
+        !membership ||
+        !user ||
+        !!user.disabledAt ||
+        !user.emailVerifiedAt ||
+        user.approvalStatus !== "APPROVED" ||
+        !user.emailReminders ||
+        membership.expiresAt.getTime() !== Number(expiry) ||
+        (stage === "renewal"
+          ? membership.status !== "ACTIVE" || membership.expiresAt <= new Date()
+          : membership.expiresAt > new Date());
+    } else if (row.key.startsWith("announcement:")) {
+      const [, announcementId, userId] = row.key.split(":");
+      const [announcement, user] = await Promise.all([
+        db.announcement.findUnique({ where: { id: announcementId } }),
+        db.user.findUnique({ where: { id: userId } }),
+      ]);
+      obsolete =
+        !announcement ||
+        !user ||
+        !!user.disabledAt ||
+        !user.emailVerifiedAt ||
+        user.approvalStatus !== "APPROVED" ||
+        !user.emailReminders;
     } else if (row.key.startsWith("account:")) {
       const token = await db.accountToken.findUnique({
         where: { id: row.key.slice(8) },

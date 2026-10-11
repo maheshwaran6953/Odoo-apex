@@ -1,4 +1,5 @@
 "use server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireRole } from "@/server/auth";
 import { validName } from "@/lib/validation";
@@ -23,6 +24,10 @@ export async function moveTask(input: unknown) {
       where: { id: data.taskId },
       data: { status: data.status as "TODO" | "DOING" | "DONE" },
     });
+    if (changed.count) {
+      revalidatePath("/fundraisers");
+      revalidatePath("/");
+    }
     return changed.count
       ? { ok: true, message: "Task status updated on the board." }
       : { ok: false, message: "This task no longer exists." };
@@ -56,6 +61,8 @@ export async function addTask(data: FormData) {
     await db.task.create({
       data: { title, description: description || undefined, assigneeId, dueAt },
     });
+    revalidatePath("/fundraisers");
+    revalidatePath("/");
     return { ok: true, message: "Task added to the To do column." };
   } catch {
     return {

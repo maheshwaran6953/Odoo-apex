@@ -1,31 +1,44 @@
 "use server";
-
-import { db } from "@/lib/db";
-import { requireRole } from "@/server/auth";
+import { revalidatePath } from "next/cache";
+import { requireRole, requireUser } from "@/server/auth";
+import { publishClubAnnouncement } from "@/server/club-service";
 export async function publishAnnouncement(input: unknown) {
   await requireRole(["STAFF", "TREASURER"]);
+  const user = await requireUser();
   const data =
     input instanceof FormData
-      ? { title: input.get("title"), body: input.get("body") }
-      : (input as {
-          title?: string;
-          body?: string;
-        });
+      ? {
+          title: input.get("title"),
+          body: input.get("body"),
+          requestKey: input.get("requestKey"),
+        }
+      : input && typeof input === "object"
+        ? (input as { title?: unknown; body?: unknown; requestKey?: unknown })
+        : {};
   if (
     typeof data.title !== "string" ||
-    data.title.trim().length < 3 ||
-    data.title.length > 120 ||
     typeof data.body !== "string" ||
-    data.body.trim().length < 10 ||
-    data.body.length > 4000
+    typeof data.requestKey !== "string"
   )
     return {
       ok: false,
-      message:
-        "Use a title of 3–120 characters and a message of 10–4,000 characters.",
+      message: "Enter a title and message, or refresh this form.",
     };
-  await db.announcement.create({
-    data: { title: data.title.trim(), body: data.body.trim() },
-  });
-  return { ok: true, message: "Update published to the club noticeboard." };
+  try {
+    const result = await publishClubAnnouncement(
+      user.id,
+      data.title,
+      data.body,
+      data.requestKey,
+    );
+    for (const path of ["/announcements", "/notifications", "/"])
+      revalidatePath(path);
+    return result;
+  } catch {
+    return {
+      ok: false,
+      message:
+        "Could not publish. Use a title of 3–120 characters and a message of 10–4,000 characters, then try again.",
+    };
+  }
 }

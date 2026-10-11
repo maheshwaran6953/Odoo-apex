@@ -18,3 +18,13 @@ Browser checks: initial Member login -> My events with no registrations; Member 
 Treasurer initial login -> Treasurer desk with zero ledger entries; Treasurer User access route denied. All three initial browser logins verified.
 
 Email implementation update: encrypted SMTP adapter, immediate account-specific OTP dispatch, safe SMTP uncertainty handling and outbox-code cleanup implemented. OTP and simulated-delivery suites pass with scoped cleanup. Actual SMTP authentication/inbox verification pending App Password.
+
+## Original problem-statement audit — 11 October 2026
+
+Read all four pages of the original Student Organization System PDF and mapped every semester scenario in PROBLEM_STATEMENT_TECH_STACK.md. Added dues setup/early renewal/reminders, announcement outbox fan-out, membership-based shop prices, order collection tracking, fundraiser income and safe receipt links. A private 20-table snapshot preceded the two additive schema fields; current records were preserved.
+
+Passed: format:check, lint, typecheck, production build, verify:basics, verify:events, verify:finance, verify:otp and verify:email. Basic checks cover concurrent dues and early renewal, expiry/stale reminders, announcement recipients/idempotency/preferences, stock races and price snapshots, exactly-once collection, fundraiser receipts and safe receipt metadata. Fixtures cleaned exactly; no external provider email sent.
+
+SMTP authentication passed separately; recipient inbox delivery and physical scanner acceptance still pending. Gateway work remains paused; original online payment collection is explicitly not complete. See the coverage matrix for the implementation boundary.
+
+Browser smoke checks after the new production build: Staff login, dynamic dues setup, shop member-price field and collection empty state render successfully. No real business records were created by these browser checks.

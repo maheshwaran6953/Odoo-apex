@@ -228,7 +228,7 @@ Camera permission requires HTTPS or localhost. A phone opening the computer's LA
 - Staff/Treasurer manage `/members` and dues records. Dues confirmation updates membership and its ledger record, with duplicate-posting protection. Dues approval is distinct from account-role approval.
 - Staff adds real inventory in `/merchandise`. Authorized purchasers order available stock; stock/order/ledger updates use server validation and transactions. Existing shop amounts are USD. This is a practice shop flow, not an integrated online payment promise.
 - Staff creates, assigns and moves tasks in `/fundraisers` through TODO, DOING and DONE. Other roles can view the board; task management remains Staff-controlled.
-- Staff publishes club notices in `/announcements`; `/notifications` contains the signed-in user's operational updates.
+- Staff and Treasurer publish club notices in `/announcements`; `/notifications` contains the signed-in user's operational updates.
 - `/account` contains personal account settings and expense history. Sign out ends the current server session.
 
 ## 8. Route reference
@@ -253,7 +253,7 @@ Dynamic bracket segments mean a real database ID, not a literal URL segment to t
 | `/merchandise` | Catalog/orders; Staff inventory controls, Treasurer cannot place shop orders |
 | `/fundraisers` | Volunteer board; Staff task controls |
 | `/treasurer` | Treasurer financial desk |
-| `/announcements` | Club noticeboard; Staff publication controls |
+| `/announcements` | Club noticeboard; Staff/Treasurer publication controls |
 | `/notifications` | Personal updates |
 | `/account` | Account preferences and own expense requests |
 | `/admin/users` | Designated Staff role approver only |
@@ -339,3 +339,12 @@ Stage only files belonging to the intended change. Never stage `.env`, backups o
 Team responsibility mapping: frontend — maheshwaran6953; backend — KishorePrabakar; database/deployment — Balajivasun; testing/reference verification — SMDANAS02. A Git author label is contribution attribution, not authentication as that person's GitHub account.
 
 Related guides: `docs/LOCAL_RUNBOOK.md`, `docs/EMAIL_VERIFICATION.md`, `docs/MASTER_REPAIR_PLAN.md`, and `docs/REPAIR_VERIFICATION.md`. This reference records the newer successful SMTP handshake; older guide status paragraphs may still describe the earlier pending setup.
+
+
+## 13. Original problem-statement coverage update
+
+See [Problem Statement Coverage and Technology Stack](docs/PROBLEM_STATEMENT_TECH_STACK.md) for the six original semester scenarios and their exact implementation/evidence.
+
+The latest audit adds dues setup, 30-day renewal reminders, early renewal preserving paid time, announcement notifications and queued mailing, active-membership shop prices, personal/Staff order collection history, fundraiser income entry and optional safe HTTPS receipt links. Existing UI styles are preserved. Start the worker for scheduled renewals and notice mailing. The shop remains a practice ordering flow and payment work remains paused.
+
+Run `npm run verify:basics` for the new scoped checks; it sends no real provider email and cleans its own temporary records. SMTP authentication has passed, but inbox delivery needs confirmation.

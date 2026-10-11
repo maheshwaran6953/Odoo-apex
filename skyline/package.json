@@ -25,7 +25,8 @@
     "verify:events": "tsx scripts/verify-events.ts --temporary-fixtures",
     "verify:finance": "tsx scripts/verify-finance.ts --temporary-fixtures",
     "email:check": "tsx scripts/check-email.ts",
-    "verify:email": "tsx scripts/verify-email-delivery.ts --temporary-fixtures"
+    "verify:email": "tsx scripts/verify-email-delivery.ts --temporary-fixtures",
+    "verify:basics": "tsx scripts/verify-basics.ts --temporary-fixtures"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

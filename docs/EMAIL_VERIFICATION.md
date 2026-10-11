@@ -1,6 +1,6 @@
 # Email verification - local Gmail SMTP setup
 
-Status: SMTP code and queue-integrity tests implemented. Real SMTP authentication and inbox delivery are pending local credentials. Verification is still disabled; no email-verification bypass exists.
+Status: SMTP code and queue-integrity tests implemented. SMTP connection/TLS/authentication passed on 11 October 2026 and local verification is enabled. Real inbox delivery and the complete new-user approval journey remain unverified; no email-verification bypass exists.
 
 ## Why a Gmail SMTP option is needed
 
@@ -26,7 +26,7 @@ EMAIL_FROM=maheshwaranpalanisamy1@gmail.com
 EMAIL_VERIFICATION_ENABLED=false
 ```
 
-Keep the already-generated OTP_SECRET unchanged. Never paste the App Password, OTP_SECRET or database keys into chat or Git. Gmail's grouped spaces are removed from App Passwords by the adapter; use the exact generated credential.
+Keep the already-generated OTP_SECRET unchanged. Never paste the App Password, OTP_SECRET or database keys into chat or Git. Enter the App Password without grouping spaces; never use the normal account password.
 
 5. Check SMTP connection/authentication, without sending an email:
 

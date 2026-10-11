@@ -1,7 +1,7 @@
 # Skyline master repair plan
 
 Date: 10 October 2026
-Status: Planning completed; application code and database have not been modified by this planning task.
+Status: Historical planning record. Implementation has since progressed; consult REPAIR_VERIFICATION.md and PROBLEM_STATEMENT_TECH_STACK.md for current evidence and remaining work.
 Priority: Correctness, authorization, dynamic data and reproducible local operation. Payment development is paused.
 
 ## 1. Scope and confirmed decisions

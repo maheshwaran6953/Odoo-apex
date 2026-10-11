@@ -61,11 +61,11 @@ cd E:\Odoo-apex-main\Odoo-apex-main\skyline
 npm run events:watch
 ```
 
-Keep it running only while required; Ctrl+C stops it. Running the app alone does not imply unattended reminder processing. Email configuration is deliberately deferred. In-app notifications still work.
+Keep it running only while required; Ctrl+C stops it. Running the app alone does not imply unattended reminder processing. Gmail SMTP authentication is verified locally. In-app notifications work independently; actual recipient inbox delivery remains unverified. Membership renewal reminders and notice mailing now also use this worker.
 
 ## OTP email activation
 
-OTP logic is implemented and tested with isolated fixtures; real inbox delivery is NOT verified. EMAIL_VERIFICATION_ENABLED=false prevents code issuance/delivery claims. New registrations remain unverified and cannot access protected club operations until email delivery is enabled and verification completes. Initial accounts were administratively bootstrapped, not OTP-verified.
+OTP logic is implemented and tested with isolated fixtures; real inbox delivery is NOT verified. Local SMTP authentication has passed and EMAIL_VERIFICATION_ENABLED=true is now configured. New registrations remain unverified and cannot access protected club operations until email delivery is enabled and verification completes. Initial accounts were administratively bootstrapped, not OTP-verified.
 
 See EMAIL_VERIFICATION.md for Gmail SMTP without a custom domain. Run npm run email:check after adding the App Password locally. Alternatively configure a verified-domain Resend provider; keep the private OTP_SECRET (at least32 characters); verify sender/provider delivery; set EMAIL_VERIFICATION_ENABLED=true; restart server and worker; test registration, inbox delivery, OTP verification, pending role approval and approved login. Do not print OTPs or bypass verification to simulate success.
 
@@ -84,6 +84,7 @@ Format edits with npm run format. The explicit integration checks create isolate
 npm run verify:otp
 npm run verify:events
 npm run verify:finance
+npm run verify:basics
 ```
 
 Prefer a separate test database for future repeated checks. They are not a substitute for full browser acceptance or actual email delivery.
@@ -102,7 +103,7 @@ The private pre-repair snapshot covers all19 previous application tables (52 rec
 
 ## Known release blockers / honest verification
 
-- Real OTP email delivery is deferred and unverified.
+- SMTP authentication passed; real OTP/reminder/notice inbox delivery remains unverified.
 - Razorpay work remains paused; actual refund and public webhook delivery are unresolved. Do not activate Live Mode.
 - npm audit reports critical/high issues in this older Next.js14/Prisma dependency stack. A deliberate supported-version migration and repeat compatibility/security checks are required before public production release. No blind npm audit fix --force was performed.
 - Account approval stores the current decision metadata; an append-only administrative audit trail remains additional hardening.

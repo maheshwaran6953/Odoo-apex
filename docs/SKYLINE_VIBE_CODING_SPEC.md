@@ -1,5 +1,7 @@
 # Skyline Student Organization System
 
+> Original hackathon design plan. Current implementation uses Supabase PostgreSQL, dynamic records and approved accounts; see PROBLEM_STATEMENT_TECH_STACK.md and ../reference.md for the actual stack and coverage.
+
 ## Vibe-coding implementation specification
 
 This is the build contract for a 24-hour vertical-slice prototype for the Odoo Hackathon. It converts the Skyline Student Organization System brief into a small product that can be built, tested, and demonstrated without inventing requirements during implementation.

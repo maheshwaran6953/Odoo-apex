@@ -1,3 +1,4 @@
+import { clubDateTime } from "@/lib/dates";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/server/auth";
@@ -80,7 +81,7 @@ export default async function CheckInPage({
                 <div>
                   <strong>{ticket.attendeeName || "Guest"}</strong>
                   <p className="subtext">
-                    {ticket.checkedInAt?.toLocaleTimeString()}
+                    {ticket.checkedInAt ? clubDateTime(ticket.checkedInAt) : ""}
                   </p>
                 </div>
                 <span className="badge active ml-auto">Checked in</span>

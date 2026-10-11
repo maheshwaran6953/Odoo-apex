@@ -1,3 +1,4 @@
+import { clubDateTime } from "@/lib/dates";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -208,7 +209,11 @@ export default async function ManageEventPage({
                       {ticket.status === "PAID" ? "Registered" : ticket.status}
                     </span>
                   </td>
-                  <td>{ticket.checkedInAt?.toLocaleString() || "—"}</td>
+                  <td>
+                    {ticket.checkedInAt
+                      ? clubDateTime(ticket.checkedInAt)
+                      : "—"}
+                  </td>
                   <td>
                     <Link
                       href={`/tickets/${ticket.id}`}
@@ -301,7 +306,7 @@ export default async function ManageEventPage({
                     <br />
                     <span className="subtext">{entry.user.email}</span>
                   </td>
-                  <td>{entry.createdAt.toLocaleString()}</td>
+                  <td>{clubDateTime(entry.createdAt)}</td>
                   <td>
                     {entry.status === "OFFERED" &&
                     entry.offerExpiresAt &&
@@ -309,7 +314,11 @@ export default async function ManageEventPage({
                       ? "Expired — awaiting job"
                       : entry.status}
                   </td>
-                  <td>{entry.offerExpiresAt?.toLocaleString() || "—"}</td>
+                  <td>
+                    {entry.offerExpiresAt
+                      ? clubDateTime(entry.offerExpiresAt)
+                      : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>

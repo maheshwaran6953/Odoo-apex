@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { currentRole } from "@/server/auth";
+import { requireUser } from "@/server/auth";
 import { moveTask, addTask } from "@/server/actions/fundraisers";
 import { ActionForm } from "@/components/club/action-form";
 import { PageHeading, date, Empty } from "@/components/club/ui";
@@ -9,14 +9,15 @@ const columns = [
   { status: "DONE", title: "Done", note: "One less thing to worry about" },
 ] as const;
 export default async function FundraisersPage() {
-  const [tasks, members, role] = await Promise.all([
+  const [tasks, members, user] = await Promise.all([
     db.task.findMany({
       include: { assignee: true },
       orderBy: { title: "asc" },
     }),
     db.member.findMany({ orderBy: { name: "asc" } }),
-    currentRole(),
+    requireUser(),
   ]);
+  const role = user.role;
   return (
     <main>
       <PageHeading
@@ -69,8 +70,8 @@ export default async function FundraisersPage() {
       )}
       {role !== "STAFF" && (
         <p className="subtext mb-5">
-          You’re viewing the board. Staff can add tasks and update their
-          progress.
+          You can update tasks assigned to you. Staff can add tasks and update
+          all progress.
         </p>
       )}
       <div className="grid gap-5 md:grid-cols-3">
@@ -111,7 +112,8 @@ export default async function FundraisersPage() {
                         : ""}
                     </p>
                   )}
-                  {role === "STAFF" && (
+                  {(role === "STAFF" ||
+                    (!!user.memberId && task.assigneeId === user.memberId)) && (
                     <ActionForm action={moveTask}>
                       <input name="taskId" value={task.id} type="hidden" />
                       <div className="task-actions">

@@ -1,3 +1,4 @@
+import { clubDateTime } from "@/lib/dates";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/server/auth";
@@ -33,9 +34,7 @@ export default async function NotificationsPage() {
                 </span>
                 <h2 className="section-title mt-3">{item.title}</h2>
                 <p className="subtext mt-2 whitespace-pre-line">{item.body}</p>
-                <p className="subtext mt-2">
-                  {item.createdAt.toLocaleString()}
-                </p>
+                <p className="subtext mt-2">{clubDateTime(item.createdAt)}</p>
               </div>
               <Link href={item.href} className="button small">
                 View details

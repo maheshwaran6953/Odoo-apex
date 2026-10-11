@@ -1,7 +1,9 @@
+import { clubDateTime, clubTimeZone } from "@/lib/dates";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { currentUser } from "@/server/auth";
+import { hasClubAccess } from "@/lib/access";
 import {
   purchaseTicket,
   joinWaitlist,
@@ -101,7 +103,7 @@ export default async function EventPage({
         title={event.name}
         description={event.description}
         action={
-          user?.role === "STAFF" ? (
+          hasClubAccess(user, ["STAFF"]) ? (
             <Link className="button" href={`/events/${event.id}/manage`}>
               Manage event
             </Link>
@@ -128,13 +130,14 @@ export default async function EventPage({
                 <h2 className="section-title">When</h2>
                 <p className="mt-2">
                   {event.startsAt.toLocaleString("en-GB", {
+                    timeZone: clubTimeZone,
                     dateStyle: "full",
                     timeStyle: "short",
                   })}
                 </p>
                 <p className="subtext">
-                  Time shown in the server’s timezone. Calendar download
-                  preserves your local time.
+                  Time shown in {clubTimeZone}. Calendar download preserves your
+                  local time.
                 </p>
               </div>
               <div>
@@ -205,7 +208,7 @@ export default async function EventPage({
           </p>
           {event.registrationClosesAt && (
             <p className="subtext mt-2">
-              Deadline: {event.registrationClosesAt.toLocaleString()}
+              Deadline: {clubDateTime(event.registrationClosesAt)}
             </p>
           )}
           <div className="space-y-3 py-5 my-4 border-y border-black/5">
@@ -231,11 +234,21 @@ export default async function EventPage({
           ) : !user.emailVerifiedAt ? (
             <div>
               <p className="subtext">
-                Verify your email before booking. Staff can confirm your
-                identity if email delivery is not yet configured.
+                Verify your email with the latest OTP before booking. Role
+                approval by the designated Staff account is a separate step.
               </p>
               <Link className="button mt-3" href="/account">
                 Manage verification
+              </Link>
+            </div>
+          ) : user.approvalStatus !== "APPROVED" ? (
+            <div>
+              <p className="subtext">
+                Your requested role must be approved before registration or
+                waitlist access.
+              </p>
+              <Link className="button mt-3" href="/access-status">
+                View approval status
               </Link>
             </div>
           ) : ownCheckout ? (
@@ -277,7 +290,7 @@ export default async function EventPage({
               </p>
               {offer && (
                 <p className="form-feedback success mb-4">
-                  Confirm by {ownWait!.offerExpiresAt!.toLocaleString()}.
+                  Confirm by {clubDateTime(ownWait!.offerExpiresAt!)}.
                 </p>
               )}
               <label className="field">

@@ -1,3 +1,4 @@
+import { clubDateTime } from "@/lib/dates";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/server/auth";
@@ -57,7 +58,8 @@ export default async function MyEventsPage() {
             <Link className="underline" href="/account">
               Manage verification
             </Link>{" "}
-            or ask club staff to confirm your identity before registering.
+            using the latest code sent to your mailbox, then wait for Staff role
+            approval.
           </p>
         </div>
       )}
@@ -119,7 +121,7 @@ export default async function MyEventsPage() {
                       : entry.status === "OFFERED" &&
                           entry.offerExpiresAt &&
                           entry.offerExpiresAt > new Date()
-                        ? `Seat held until ${entry.offerExpiresAt.toLocaleString()}`
+                        ? `Seat held until ${clubDateTime(entry.offerExpiresAt)}`
                         : "Offer expired. You may rejoin if the event remains full."}
                 </p>
               </div>

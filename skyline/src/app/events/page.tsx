@@ -1,7 +1,9 @@
+import { clubDatePart, clubTimeZone } from "@/lib/dates";
 import Link from "next/link";
 import { MapPin, ArrowRight, Ticket } from "lucide-react";
 import { db } from "@/lib/db";
 import { currentUser } from "@/server/auth";
+import { hasClubAccess } from "@/lib/access";
 import { EventCreator } from "@/components/club/event-creator";
 import { PageHeading, Empty, money, date } from "@/components/club/ui";
 export default async function EventsPage({
@@ -52,7 +54,7 @@ export default async function EventsPage({
         title="Events & gatherings"
         description="Know what’s happening, book a place, and keep your ticket close."
         action={
-          user?.role === "STAFF" ? (
+          hasClubAccess(user, ["STAFF"]) ? (
             <Link href="/events/check-in" className="button">
               <Ticket size={16} />
               Open door desk
@@ -64,7 +66,7 @@ export default async function EventsPage({
           )
         }
       />
-      {user?.role === "STAFF" && <EventCreator />}
+      {hasClubAccess(user, ["STAFF"]) && <EventCreator />}
       <form className="toolbar" action="/events">
         <label className="field !mb-0 flex-1">
           <span>Find an event or venue</span>
@@ -111,9 +113,12 @@ export default async function EventsPage({
               <div className="event-art">
                 <span className="poster-title">{event.name}</span>
                 <div className="date-tile">
-                  <strong>{event.startsAt.getDate()}</strong>
+                  <strong>{clubDatePart(event.startsAt, "day")}</strong>
                   <span>
-                    {event.startsAt.toLocaleString("en-GB", { month: "short" })}
+                    {event.startsAt.toLocaleString("en-GB", {
+                      month: "short",
+                      timeZone: clubTimeZone,
+                    })}
                   </span>
                 </div>
               </div>

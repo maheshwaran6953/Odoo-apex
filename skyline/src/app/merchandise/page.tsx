@@ -1,3 +1,4 @@
+import { StockAdjustments } from "@/components/club/stock-adjustments";
 import { ActionForm } from "@/components/club/action-form";
 import {
   addInventoryItem,
@@ -115,6 +116,7 @@ export default async function MerchandisePage() {
           </ActionForm>
         </details>
       )}
+      {role === "STAFF" && <StockAdjustments items={items} />}
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {groups.map((group) => (
           <ShopProduct

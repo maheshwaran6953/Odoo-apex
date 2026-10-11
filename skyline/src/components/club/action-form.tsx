@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useClubFeedback } from "./feedback";
@@ -20,6 +20,8 @@ type Props = {
 };
 
 export function ActionForm({ action, children, className = "" }: Props) {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const router = useRouter();
@@ -27,8 +29,20 @@ export function ActionForm({ action, children, className = "" }: Props) {
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (!hydrated || pending) return;
     const data = new FormData(event.currentTarget);
+    // Omit browser placeholders for unselected optional file inputs before
+    // multipart serialization. Named empty files remain for server validation.
+    for (const name of Array.from(new Set(data.keys()))) {
+      const values = data.getAll(name);
+      const selected = values.filter(
+        (value) =>
+          typeof value === "string" || value.name !== "" || value.size > 0,
+      );
+      if (selected.length === values.length) continue;
+      data.delete(name);
+      for (const value of selected) data.append(name, value);
+    }
     // datetime-local values have no timezone; convert using the attendee's browser.
     for (const field of ["startsAt", "registrationClosesAt"]) {
       const startsAt = data.get(field);
@@ -61,10 +75,20 @@ export function ActionForm({ action, children, className = "" }: Props) {
   }
 
   return (
-    <form className={className} onSubmit={submit} aria-busy={pending}>
-      <fieldset disabled={pending} className="action-fields">
+    <form
+      method="post"
+      className={className}
+      onSubmit={submit}
+      aria-busy={pending}
+    >
+      <fieldset disabled={!hydrated || pending} className="action-fields">
         {children}
       </fieldset>
+      <noscript>
+        <p className="form-feedback failure">
+          Enable JavaScript to submit this form securely.
+        </p>
+      </noscript>
       {pending && (
         <p className="form-feedback" role="status">
           <Loader2 size={16} className="animate-spin" />

@@ -32,6 +32,7 @@ export default async function RootLayout({
   if (!user && !publicPath) redirect("/login");
   if (
     user &&
+    !publicPath &&
     ![
       "/login",
       "/register",

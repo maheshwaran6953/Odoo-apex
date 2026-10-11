@@ -1,3 +1,4 @@
+import { clubDatePart, clubTimeZone } from "@/lib/dates";
 import Link from "next/link";
 import { CalendarDays, ArrowRight, Users, MapPin, Check } from "lucide-react";
 import { db } from "@/lib/db";
@@ -47,7 +48,7 @@ export default async function HomePage() {
       <PageHeading
         eyebrow="THE CLUB, AT A GLANCE"
         title="Good things happen together."
-        description={`Here's what's happening around Skyline. ${new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" }).format(now)}`}
+        description={`Here's what's happening around Skyline. ${new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: clubTimeZone }).format(now)}`}
         action={
           <Link href="/events" className="button">
             <CalendarDays size={16} />
@@ -111,10 +112,11 @@ export default async function HomePage() {
               <>
                 <div className="flex items-start gap-4">
                   <div className="date-tile">
-                    <strong>{featured.startsAt.getDate()}</strong>
+                    <strong>{clubDatePart(featured.startsAt, "day")}</strong>
                     <span>
                       {featured.startsAt.toLocaleString("en-GB", {
                         month: "short",
+                        timeZone: clubTimeZone,
                       })}
                     </span>
                   </div>

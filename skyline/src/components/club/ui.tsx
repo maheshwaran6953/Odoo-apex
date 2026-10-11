@@ -1,3 +1,4 @@
+import { clubDate } from "@/lib/dates";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 export const money = (cents: number, currency = "USD") =>
@@ -5,12 +6,7 @@ export const money = (cents: number, currency = "USD") =>
     style: "currency",
     currency,
   }).format(cents / 100);
-export const date = (value: Date | string) =>
-  new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
+export const date = clubDate;
 export function PageHeading({
   eyebrow,
   title,

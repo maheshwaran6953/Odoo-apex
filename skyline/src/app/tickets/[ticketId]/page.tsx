@@ -1,3 +1,4 @@
+import { clubDateTime } from "@/lib/dates";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -27,7 +28,7 @@ export default async function TicketPage({
       <PageHeading
         eyebrow="YOUR ENTRY PASS"
         title={ticket.event.name}
-        description={`${ticket.event.startsAt.toLocaleString()} · ${ticket.event.location}`}
+        description={`${clubDateTime(ticket.event.startsAt)} · ${ticket.event.location}`}
       />
       <section className="glass-panel panel max-w-[640px] mx-auto printable-ticket">
         <div className="flex justify-between items-center mb-6">
@@ -50,7 +51,7 @@ export default async function TicketPage({
         ) : (
           <p className="form-feedback">
             {ticket.status === "CHECKED_IN"
-              ? `Checked in ${ticket.checkedInAt?.toLocaleString()}. This ticket cannot be reused.`
+              ? `Checked in ${ticket.checkedInAt ? clubDateTime(ticket.checkedInAt) : ""}. This ticket cannot be reused.`
               : ticket.status === "CANCELLED"
                 ? "Registration cancelled. This QR has been revoked."
                 : "This older ticket has a backup code only."}

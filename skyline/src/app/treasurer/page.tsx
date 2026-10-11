@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { FinanceFilterForm } from "@/components/club/finance-filters";
+import { financeFilters, financeWhere } from "@/server/finance-report-service";
 import { randomUUID } from "node:crypto";
 import { financeSummary } from "@/server/finance-service";
 import { db } from "@/lib/db";
@@ -11,12 +14,61 @@ import { ActionForm } from "@/components/club/action-form";
 import { ExpenseForm } from "@/components/club/expense-section";
 import { PageHeading, Stat, money, date, Empty } from "@/components/club/ui";
 
-export default async function TreasurerPage() {
+export default async function TreasurerPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   await requireRole(["TREASURER"]);
   const user = await requireUser();
+  let filters = financeFilters({});
+  let filterError = "";
+  try {
+    filters = financeFilters(searchParams);
+  } catch (error) {
+    filterError = (error as Error).message;
+  }
+  if (filterError)
+    return (
+      <main>
+        <PageHeading
+          eyebrow="THE MONEY, CLEARLY"
+          title="Treasurer desk"
+          description="Correct the filters to view the ledger."
+        />
+        <FinanceFilterForm filters={filters} error={filterError} />
+      </main>
+    );
+  const rawPage = searchParams.page ?? "1";
+  const pageNumber =
+    typeof rawPage === "string" && /^[1-9]\d{0,5}$/.test(rawPage)
+      ? Number(rawPage)
+      : 1;
   const transactions = await db.transaction.findMany({
-    orderBy: { createdAt: "desc" },
+    where: financeWhere(filters),
+    take: 10001,
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
   });
+  if (transactions.length > 10000)
+    return (
+      <main>
+        <PageHeading
+          eyebrow="THE MONEY, CLEARLY"
+          title="Treasurer desk"
+          description="Narrow the report to see complete totals."
+        />
+        <FinanceFilterForm
+          filters={filters}
+          error="More than 10,000 entries match. Choose a narrower date range."
+        />
+      </main>
+    );
+  const pageCount = Math.max(1, Math.ceil(transactions.length / 25));
+  const activePage = Math.min(pageNumber, pageCount);
+  const displayed = transactions.slice((activePage - 1) * 25, activePage * 25);
+  const pageHref = (page: number) =>
+    "/treasurer?" +
+    new URLSearchParams({ ...filters, page: String(page) }).toString();
   const personIds = Array.from(
     new Set(
       transactions.flatMap((t) =>
@@ -41,6 +93,7 @@ export default async function TreasurerPage() {
         title="Treasurer desk"
         description="Review reimbursement requests and track posted income and expenses separately by currency."
       />
+      <FinanceFilterForm filters={filters} />
       {!currencies.length && (
         <Empty>
           No financial activity yet. Your first club transaction will appear
@@ -59,9 +112,9 @@ export default async function TreasurerPage() {
             <h2 className="section-title mb-3">{currency} ledger</h2>
             <div className="stats-grid">
               <Stat
-                label="Club balance"
+                label="Filtered balance"
                 value={money(income - expenses, currency)}
-                note="Posted income minus posted expenses"
+                note="Matching posted income minus matching posted expenses"
                 dark
               />
               <Stat
@@ -100,7 +153,7 @@ export default async function TreasurerPage() {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((t) => {
+                {displayed.map((t) => {
                   const claimant = t.claimantId
                     ? names.get(t.claimantId)
                     : null;
@@ -128,11 +181,18 @@ export default async function TreasurerPage() {
                               : "Not recorded"}
                           </p>
                         )}
-                        {t.receiptUrl && (
+                        {(t.receiptPath || t.receiptUrl) && (
                           <a
                             className="section-link block mt-2"
-                            href={t.receiptUrl}
-                            target="_blank"
+                            href={
+                              t.receiptPath
+                                ? "/api/receipts/" + t.id
+                                : t.receiptUrl!
+                            }
+                            target={t.receiptPath ? undefined : "_blank"}
+                            download={
+                              t.receiptPath ? t.receiptName || true : undefined
+                            }
                             rel="noopener noreferrer"
                           >
                             Open receipt
@@ -216,7 +276,34 @@ export default async function TreasurerPage() {
               </tbody>
             </table>
           </div>
-          {!transactions.length && <Empty>No ledger entries yet.</Empty>}
+          {!transactions.length && (
+            <Empty>No entries match these filters.</Empty>
+          )}
+          <nav
+            className="flex flex-wrap gap-3 items-center mt-4"
+            aria-label="Ledger pages"
+          >
+            {activePage > 1 && (
+              <Link
+                className="button secondary small"
+                href={pageHref(activePage - 1)}
+              >
+                Previous
+              </Link>
+            )}
+            <span className="subtext">
+              Page {activePage} of {pageCount} · {transactions.length} matching
+              entries
+            </span>
+            {activePage < pageCount && (
+              <Link
+                className="button secondary small"
+                href={pageHref(activePage + 1)}
+              >
+                Next
+              </Link>
+            )}
+          </nav>
         </section>
         <section className="glass-panel panel h-fit">
           <h2 className="section-title">Submit an expense</h2>

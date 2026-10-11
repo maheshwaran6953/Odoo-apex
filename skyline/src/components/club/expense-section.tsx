@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import { requireUser } from "@/server/auth";
 import { createExpense } from "@/server/actions/treasurer";
@@ -7,6 +8,20 @@ import { date, money, Empty } from "@/components/club/ui";
 export function ExpenseForm() {
   return (
     <ActionForm action={createExpense}>
+      <input type="hidden" name="requestKey" value={randomUUID()} />
+      <label className="field">
+        <span>Private receipt file (optional)</span>
+        <input
+          className="input"
+          type="file"
+          name="receiptFile"
+          accept="application/pdf,image/png,image/jpeg"
+        />
+        <small className="subtext">
+          PDF, PNG or JPEG up to 2 MB. Only you and approved Treasurers can
+          download it. Choose a file or link.
+        </small>
+      </label>
       <label className="field">
         <span>What was it for?</span>
         <input
@@ -46,7 +61,8 @@ export function ExpenseForm() {
           pattern="https://.*"
         />
         <small className="subtext">
-          Use a link the reviewer can access. File uploads are not provided.
+          Alternatively, use an HTTPS link the reviewer can access. External
+          links are not private file uploads.
         </small>
       </label>
       <button className="button">Submit for review</button>
@@ -95,11 +111,20 @@ export async function ExpenseAccountSection({ userId }: { userId: string }) {
                 <tr key={request.id}>
                   <td>
                     {request.description}
-                    {request.receiptUrl && (
+                    {(request.receiptPath || request.receiptUrl) && (
                       <a
                         className="section-link block mt-1"
-                        href={request.receiptUrl}
-                        target="_blank"
+                        href={
+                          request.receiptPath
+                            ? "/api/receipts/" + request.id
+                            : request.receiptUrl!
+                        }
+                        target={request.receiptPath ? undefined : "_blank"}
+                        download={
+                          request.receiptPath
+                            ? request.receiptName || true
+                            : undefined
+                        }
                         rel="noopener noreferrer"
                       >
                         Open receipt

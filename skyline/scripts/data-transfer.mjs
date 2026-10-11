@@ -53,6 +53,7 @@ const dateFields = [
   "reviewedAt",
   "requestedAt",
   "windowStartedAt",
+  "fulfilledAt",
 ];
 async function main() {
   const [command, requestedPath] = process.argv.slice(2);

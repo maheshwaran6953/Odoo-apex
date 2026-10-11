@@ -245,6 +245,7 @@ model InventoryItem {
   category String
   size String?
   priceCents Int
+  memberPriceCents Int?
   stock Int
   orderLines MerchandiseOrderLine[]
 }
@@ -256,6 +257,7 @@ model MerchandiseOrder {
   totalCents Int
   member Member? @relation(fields: [memberId], references: [id])
   lines MerchandiseOrderLine[]
+  fulfilledAt DateTime?
   createdAt DateTime @default(now())
 }
 model MerchandiseOrderLine {

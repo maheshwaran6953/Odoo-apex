@@ -82,7 +82,7 @@ Example: Staff creates a campus workshop, a Member registers and receives a QR t
 
 | Area                  | Technology in this repository                               | Purpose                                                                   |
 | --------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Application framework | Next.js 14 App Router                                       | Pages, routing, server rendering and server operations in one application |
+| Application framework | Next.js 15 App Router                                       | Pages, routing, server rendering and server operations in one application |
 | Frontend              | React 18 and TypeScript 5                                   | Typed components, forms and interactive browser controls                  |
 | Styling               | Tailwind CSS 3, custom CSS, PostCSS and Autoprefixer        | Existing responsive club UI and glass-style panels                        |
 | Components            | Project-specific club components, CVA, clsx, tailwind-merge | Consistent buttons, inputs, panels and styles                             |

@@ -10,7 +10,7 @@ Versions below are resolved in [`skyline/package-lock.json`](skyline/package-loc
 
 | Layer                    | Current implementation                                      | Responsibility                                                                               |
 | ------------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Application framework    | **Next.js 14.2.35**, App Router                             | Routing, layouts, server rendering and the application server                                |
+| Application framework    | **Next.js 15.5.27**, App Router                             | Routing, layouts, server rendering and the application server                                |
 | Frontend                 | **React 18.3.1**, **TypeScript 5.9.3**                      | Typed pages, forms and interactive components                                                |
 | Styling                  | **Tailwind CSS 3.4.19**, custom CSS                         | Responsive glass panels, desktop top navigation and mobile bottom navigation                 |
 | Icons and style helpers  | **Lucide React 0.468.0**, CVA, clsx, tailwind-merge         | Icons and reusable component styling                                                         |
@@ -236,7 +236,7 @@ The latest implementation checks passed. Service verification commands are `veri
 - Razorpay work is paused. Public webhook delivery and refunds remain unresolved; real online collection, shop payment and bank payouts are not complete.
 - Physical QR-camera/device acceptance and a verified public deployment remain pending. Camera access requires HTTPS or localhost.
 - Private receipts use Supabase Storage (PDF/PNG/JPEG, max 2 MB) and authorized claimant/Treasurer downloads. Validated external HTTPS links remain optional; do not supply both.
-- Existing Next.js 14/Prisma dependency advisories require a deliberate supported-version upgrade before public production release. Versioned migrations, backup restore rehearsal and deployment-specific abuse protection also remain hardening work.
+- The deployment branch upgrades Next.js to 15.5.27 and pins patched transitive dependencies; production dependency audit reports zero findings. Development-tool advisories remain separately tracked. Versioned migrations, backup restore rehearsal and deployment-specific abuse protection also remain hardening work.
 
 See [repair verification](docs/REPAIR_VERIFICATION.md) for completed checks and boundaries. Exact usage of the new controls is in [operational features](docs/OPERATIONAL_FEATURES.md).
 

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { signOut } from "@/server/actions/auth";
 import {
   LayoutDashboard,
@@ -11,25 +11,66 @@ import {
   Columns3,
   Wallet,
   Megaphone,
-  Menu,
-  X,
-  ArrowUpRight,
+  Bell,
+  MoreHorizontal,
+  UserRound,
+  LogOut,
+  ScanLine,
+  ChevronRight,
 } from "lucide-react";
+
 const navigation = [
-  { href: "/", name: "Overview", icon: LayoutDashboard },
-  { href: "/members", name: "Members", icon: Users },
-  { href: "/events", name: "Events & tickets", icon: CalendarDays },
-  { href: "/my-events", name: "My events", icon: CalendarDays },
-  { href: "/payments", name: "My payments", icon: Wallet },
-  { href: "/admin/payments", name: "Test payment desk", icon: Wallet },
-  { href: "/notifications", name: "My updates", icon: Megaphone },
-  { href: "/account", name: "My account", icon: Users },
-  { href: "/admin/users", name: "User access", icon: Users },
-  { href: "/merchandise", name: "Club shop", icon: ShoppingBag },
-  { href: "/fundraisers", name: "Volunteer board", icon: Columns3 },
-  { href: "/treasurer", name: "Treasurer", icon: Wallet },
-  { href: "/announcements", name: "Noticeboard", icon: Megaphone },
+  { href: "/", name: "Overview", icon: LayoutDashboard, group: "Club" },
+  { href: "/members", name: "Members", icon: Users, group: "Club" },
+  { href: "/events", name: "Events", icon: CalendarDays, group: "Club" },
+  { href: "/my-events", name: "My events", icon: CalendarDays, group: "Club" },
+  { href: "/merchandise", name: "Club shop", icon: ShoppingBag, group: "Club" },
+  { href: "/fundraisers", name: "Volunteers", icon: Columns3, group: "Club" },
+  {
+    href: "/announcements",
+    name: "Noticeboard",
+    icon: Megaphone,
+    group: "Club",
+  },
+  { href: "/treasurer", name: "Finance", icon: Wallet, group: "Club" },
+  { href: "/notifications", name: "My updates", icon: Bell, group: "Personal" },
+  { href: "/account", name: "My account", icon: UserRound, group: "Personal" },
+  {
+    href: "/events/check-in",
+    name: "Door check-in",
+    icon: ScanLine,
+    group: "Administration",
+  },
+  {
+    href: "/admin/users",
+    name: "User access",
+    icon: Users,
+    group: "Administration",
+  },
+  {
+    href: "/payments",
+    name: "My payments",
+    icon: Wallet,
+    group: "Payment testing",
+  },
+  {
+    href: "/admin/payments",
+    name: "Test payment desk",
+    icon: Wallet,
+    group: "Payment testing",
+  },
 ];
+const primaryPaths: Record<string, string[]> = {
+  MEMBER: ["/my-events", "/events", "/merchandise", "/fundraisers"],
+  STAFF: ["/", "/events", "/members", "/fundraisers"],
+  TREASURER: ["/treasurer", "/members", "/events", "/"],
+  GUEST: ["/events"],
+};
+function matches(path: string, href: string) {
+  return href === "/"
+    ? path === "/"
+    : path === href || path.startsWith(href + "/");
+}
 export function ClubShell({
   children,
   role,
@@ -42,13 +83,31 @@ export function ClubShell({
   identity?: string;
 }) {
   const path = usePathname();
-  const [open, setOpen] = useState(false);
+  const moreRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+    if (moreRef.current) moreRef.current.open = false;
+  }, [path]);
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      if (
+        moreRef.current?.open &&
+        event.target instanceof Node &&
+        !moreRef.current.contains(event.target)
+      )
+        moreRef.current.open = false;
     };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
+    const closeEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !moreRef.current?.open) return;
+      const returnFocus = moreRef.current.contains(document.activeElement);
+      moreRef.current.open = false;
+      if (returnFocus) moreRef.current.querySelector("summary")?.focus();
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeEscape);
+    };
   }, []);
   if (
     [
@@ -60,122 +119,175 @@ export function ClubShell({
     ].includes(path)
   )
     return <>{children}</>;
-  const current = navigation.find((item) =>
-    item.href === "/" ? path === "/" : path.startsWith(item.href),
+  const guest = role === "GUEST";
+  const allowed = navigation.filter((item) => {
+    if (guest) return item.href === "/events";
+    if (item.href === "/admin/users") return role === "STAFF" && isApprover;
+    if (["/members", "/admin/payments"].includes(item.href))
+      return ["STAFF", "TREASURER"].includes(role);
+    if (item.href === "/events/check-in") return role === "STAFF";
+    if (item.href === "/treasurer") return role === "TREASURER";
+    return true;
+  });
+  const primary = (primaryPaths[role] || primaryPaths.MEMBER).flatMap((href) =>
+    allowed.filter((item) => item.href === href),
   );
+  const secondary = allowed.filter(
+    (item) => !primary.some((link) => link.href === item.href),
+  );
+  const route = path.startsWith("/tickets/") ? "/my-events" : path;
+  const current = allowed
+    .filter((item) => matches(route, item.href))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  const secondaryActive = secondary.some((item) => item.href === current?.href);
+  const home = primary[0]?.href || "/events";
+  const roleLabel = guest
+    ? identity
+      ? "Awaiting approval"
+      : "Campus events"
+    : role === "MEMBER"
+      ? "Member space"
+      : role === "STAFF"
+        ? "Staff space"
+        : "Treasurer space";
+  const closeMore = () => {
+    if (moreRef.current) moreRef.current.open = false;
+  };
   return (
-    <div className="club-app">
-      {open && (
-        <button
-          className="nav-backdrop"
-          aria-label="Close navigation"
-          onClick={() => setOpen(false)}
-        />
-      )}
-      <aside className={`club-sidebar ${open ? "is-open" : ""}`}>
-        <button
-          className="mobile-sidebar-close icon-button"
-          aria-label="Close sidebar"
-          onClick={() => setOpen(false)}
-        >
-          <X size={18} />
-        </button>
-        <Link href="/" className="club-brand" onClick={() => setOpen(false)}>
-          <span className="brand-symbol">s.</span>
-          <span>
-            skyline<span className="brand-caption">STUDENT ASSOCIATION</span>
-          </span>
-        </Link>
-        <div className="sidebar-label">YOUR CLUB SPACE</div>
-        <nav aria-label="Main navigation">
-          {navigation
-            .filter((item) =>
-              role === "GUEST"
-                ? item.href === "/events"
-                : item.href.startsWith("/admin")
-                  ? item.href === "/admin/users"
-                    ? isApprover
-                    : role === "STAFF" || role === "TREASURER"
-                  : item.href === "/members"
-                    ? role === "STAFF" || role === "TREASURER"
-                    : item.href === "/treasurer"
-                      ? role === "TREASURER"
-                      : true,
-            )
-            .map(({ href, name, icon: Icon }) => {
-              const active =
-                href === "/" ? path === "/" : path.startsWith(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setOpen(false)}
-                  aria-current={active ? "page" : undefined}
-                  className={`nav-item ${active ? "active" : ""}`}
-                >
-                  <Icon size={18} strokeWidth={1.7} />
-                  {name}
-                  {active && <span className="nav-dot" />}
-                </Link>
-              );
-            })}
-        </nav>
-        <div className="sidebar-note">
-          <span className="badge">Club workspace</span>
-          <p>
-            A little less admin.
-            <br />A little more campus life.
-          </p>
-          <Link href="/account">
-            Account preferences <ArrowUpRight size={15} />
-          </Link>
-        </div>
-        <div className="sidebar-footer">
-          <span className="avatar small">{role.charAt(0)}</span>
-          <div>
-            <strong>{role.charAt(0) + role.slice(1).toLowerCase()} desk</strong>
-            <span className="break-all">
-              {identity || "Account-based access"}
+    <div
+      className={`club-app easy-navigation ${guest ? "guest-navigation" : ""}`}
+    >
+      <a className="skip-navigation" href="#workspace-content">
+        Skip to content
+      </a>
+      <header className="workspace-header">
+        <div className="workspace-header-row">
+          <Link
+            href={home}
+            className="club-brand workspace-brand"
+            aria-label="Skyline home"
+          >
+            <span className="brand-symbol">s.</span>
+            <span>
+              skyline<span className="brand-caption">STUDENT ASSOCIATION</span>
             </span>
-          </div>
-        </div>
-      </aside>
-      <div className="club-content">
-        <header className="club-topbar">
-          <div className="flex items-center gap-3">
-            <button
-              className="icon-button mobile-menu"
-              aria-label={open ? "Close navigation" : "Open navigation"}
-              aria-expanded={open}
-              onClick={() => setOpen(!open)}
-            >
-              {open ? <X size={20} /> : <Menu size={20} />}
-            </button>
-            <span className="text-muted">Workspace</span>
-            <span className="text-muted">/</span>
-            <strong>{current?.name ?? "Skyline"}</strong>
-          </div>
-          <div className="flex items-center gap-5">
-            <Link href="/announcements" className="topbar-link">
-              <Megaphone size={16} />
-              <span>Club updates</span>
-            </Link>
-            {role === "GUEST" ? (
+          </Link>
+          <span className="workspace-role">{roleLabel}</span>
+          <div className="workspace-account-actions">
+            {!guest && (
+              <Link
+                href="/notifications"
+                className="workspace-icon"
+                aria-label="My updates"
+                title="My updates"
+              >
+                <Bell size={19} />
+              </Link>
+            )}
+            {!guest && (
+              <Link
+                href="/account"
+                className="workspace-account"
+                aria-label="My account"
+                title={identity || "My account"}
+              >
+                <UserRound size={18} />
+                <span>{identity?.split("@")[0] || "My account"}</span>
+              </Link>
+            )}
+            {identity ? (
+              <form action={signOut}>
+                <button
+                  className="workspace-icon"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  <LogOut size={18} />
+                  <span className="sr-only">Sign out</span>
+                </button>
+              </form>
+            ) : (
               <Link href="/login" className="button small">
                 Sign in
               </Link>
-            ) : (
-              <form action={signOut}>
-                <button className="text-xs text-muted hover:text-[#243e36]">
-                  Sign out
-                </button>
-              </form>
             )}
           </div>
-        </header>
-        <div className="page-container">{children}</div>
+        </div>
+        <div className="workspace-navigation-row">
+          <nav className="workspace-navigation" aria-label="Main navigation">
+            {primary.map(({ href, name, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                aria-current={current?.href === href ? "page" : undefined}
+                className={`workspace-nav-link ${current?.href === href ? "active" : ""}`}
+                onClick={closeMore}
+              >
+                <Icon size={19} strokeWidth={1.8} />
+                <span>{name}</span>
+              </Link>
+            ))}
+            {!!secondary.length && (
+              <details className="workspace-more" ref={moreRef}>
+                <summary
+                  className={`workspace-nav-link ${secondaryActive ? "active" : ""}`}
+                  aria-label="More pages"
+                >
+                  <MoreHorizontal size={21} />
+                  <span>More</span>
+                </summary>
+                <div className="workspace-more-panel">
+                  <div className="workspace-more-heading">
+                    <strong>More in Skyline</strong>
+                    <span>{roleLabel}</span>
+                  </div>
+                  {[
+                    "Club",
+                    "Personal",
+                    "Administration",
+                    "Payment testing",
+                  ].map((group) => {
+                    const links = secondary.filter(
+                      (item) => item.group === group,
+                    );
+                    return links.length ? (
+                      <section key={group} aria-label={group}>
+                        <h2>{group}</h2>
+                        {links.map(({ href, name, icon: Icon }) => (
+                          <Link
+                            key={href}
+                            href={href}
+                            className={`workspace-more-link ${current?.href === href ? "active" : ""}`}
+                            aria-current={
+                              current?.href === href ? "page" : undefined
+                            }
+                            onClick={closeMore}
+                          >
+                            <Icon size={17} />
+                            <span>{name}</span>
+                            <ChevronRight size={14} />
+                          </Link>
+                        ))}
+                      </section>
+                    ) : null;
+                  })}
+                </div>
+              </details>
+            )}
+          </nav>
+          <div className="workspace-location" aria-label="Current section">
+            <span>{roleLabel}</span>
+            <ChevronRight size={13} />
+            <strong>{current?.name || "Account access"}</strong>
+          </div>
+        </div>
+      </header>
+      <div className="workspace-body">
+        <div className="page-container" id="workspace-content" tabIndex={-1}>
+          {children}
+        </div>
         <footer className="club-footer">
-          Skyline Student Association{" "}
+          Skyline Student Association
           <span>Club workspace · Payments are simulated, not charged.</span>
         </footer>
       </div>

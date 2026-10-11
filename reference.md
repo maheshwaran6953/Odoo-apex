@@ -62,6 +62,15 @@ npm run events:jobs
 
 The worker handles event updates, waitlist offers/expiry, reminders and queued messages. It also invokes the existing payment reconciliation code; payment development remains paused. Do not activate Razorpay events or Live Mode as part of this startup. Registration/resend dispatch their own OTP immediately and do not require this worker for that immediate attempt.
 
+### Easier navigation
+
+Skyline uses a top navigation bar on desktop and a fixed bottom bar on phones. Four frequent destinations are visible for each role:
+
+- Member: My events, Events, Club shop, Volunteers.
+- Staff: Overview, Events, Members, Volunteers.
+- Treasurer: Finance, Members, Events, Overview.
+
+Use **More** for the remaining permitted pages. Staff can reach Door check-in there; only the designated approving Staff account sees User access. My account, My updates and Sign out remain available in the header. More closes when a destination is selected, when clicking outside it, or with Escape. Existing server permission checks still protect restricted pages. Public visitors can browse Events and sign in.
 ## 2. What the application does
 
 Skyline brings membership, event registration, attendance, club merchandise, volunteer tasks, notices and financial records into one workspace. Its operational records come from the database and user actions. There is no automatic demo seed on startup.

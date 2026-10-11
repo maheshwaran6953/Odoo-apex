@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./navigation.css";
 import { ClubShell } from "@/components/club/shell";
 import { ClubFeedbackProvider } from "@/components/club/feedback";
 import { currentRole } from "@/server/auth";

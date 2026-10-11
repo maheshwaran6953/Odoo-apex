@@ -28,3 +28,9 @@ Passed: format:check, lint, typecheck, production build, verify:basics, verify:e
 SMTP authentication passed separately; recipient inbox delivery and physical scanner acceptance still pending. Gateway work remains paused; original online payment collection is explicitly not complete. See the coverage matrix for the implementation boundary.
 
 Browser smoke checks after the new production build: Staff login, dynamic dues setup, shop member-price field and collection empty state render successfully. No real business records were created by these browser checks.
+
+## Navigation usability update — 11 October 2026
+
+Replaced the sidebar with four role-specific top navigation links on desktop and a fixed bottom navigation bar on phones. Remaining permitted destinations use a native More disclosure. Glass styling, existing page content and server authorization remain intact.
+
+Passed: TypeScript, ESLint, production build and navigation-source Prettier checks. Browser checks covered Staff, Member and Treasurer shortcuts; Staff-only links absent for Member/Treasurer; desktop 1280×900 and phone 390×844 layouts without horizontal overflow; phone bar anchored to the viewport; More panel contained within the viewport; destination click, outside click and Escape close behavior with keyboard focus restoration. No business records were created. Browser viewport override restored and verification accounts signed out.

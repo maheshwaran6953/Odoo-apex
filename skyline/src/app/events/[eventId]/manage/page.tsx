@@ -14,12 +14,14 @@ import { ActionForm } from "@/components/club/action-form";
 import { EventFields } from "@/components/club/event-creator";
 import { PageHeading, money, Empty } from "@/components/club/ui";
 export default async function ManageEventPage({
-  params,
-  searchParams,
+  params: paramsPromise,
+  searchParams: searchParamsPromise,
 }: {
-  params: { eventId: string };
-  searchParams: { q?: string; status?: string; page?: string };
+  params: Promise<{ eventId: string }>;
+  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
+  const params = await paramsPromise;
+  const searchParams = await searchParamsPromise;
   await requireRole(["STAFF"]);
   const event = await db.event.findUnique({
     where: { id: params.eventId },

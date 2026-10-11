@@ -5,10 +5,11 @@ import { requireRole } from "@/server/auth";
 import { DoorScanner } from "@/components/club/door-scanner";
 import { PageHeading, Empty } from "@/components/club/ui";
 export default async function CheckInPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { eventId?: string };
+  searchParams: Promise<{ eventId?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   await requireRole(["STAFF"]);
   const events = await db.event.findMany({
     where: {

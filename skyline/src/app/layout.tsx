@@ -17,7 +17,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const path = headers().get("x-skyline-path") || "/";
+  const path = (await headers()).get("x-skyline-path") || "/";
   const user = await currentUser();
   const publicPath =
     [

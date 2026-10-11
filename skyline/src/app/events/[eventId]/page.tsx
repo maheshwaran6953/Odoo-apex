@@ -15,10 +15,11 @@ import { PageHeading, money, date } from "@/components/club/ui";
 import { startEventCheckout } from "@/server/actions/payments";
 import { gatewayReady } from "@/server/razorpay";
 export default async function EventPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { eventId: string };
+  params: Promise<{ eventId: string }>;
 }) {
+  const params = await paramsPromise;
   const [event, user] = await Promise.all([
     db.event.findUnique({
       where: { id: params.eventId },

@@ -4,10 +4,11 @@ import { requireUser } from "@/server/auth";
 import { PageHeading, money, Empty } from "@/components/club/ui";
 import { PaymentStatus } from "@/components/club/payment-status";
 export default async function PaymentsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { page?: string };
+  searchParams: Promise<{ page?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const user = await requireUser();
   const page = Math.max(
     1,

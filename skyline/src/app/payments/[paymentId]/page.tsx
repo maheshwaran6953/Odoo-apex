@@ -14,10 +14,11 @@ import { PaymentStatus } from "@/components/club/payment-status";
 import { ActionForm } from "@/components/club/action-form";
 import { RazorpayCheckout } from "@/components/club/razorpay-checkout";
 export default async function PaymentPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { paymentId: string };
+  params: Promise<{ paymentId: string }>;
 }) {
+  const params = await paramsPromise;
   const user = await requireUser();
   const payment = await db.payment.findUnique({
     where: { id: params.paymentId },

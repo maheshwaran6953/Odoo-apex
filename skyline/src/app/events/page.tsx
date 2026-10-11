@@ -7,10 +7,11 @@ import { hasClubAccess } from "@/lib/access";
 import { EventCreator } from "@/components/club/event-creator";
 import { PageHeading, Empty, money, date } from "@/components/club/ui";
 export default async function EventsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { q?: string; view?: string };
+  searchParams: Promise<{ q?: string; view?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const user = await currentUser();
   const q = (searchParams.q || "").slice(0, 100).trim();
   const view = ["upcoming", "past", "cancelled", "all"].includes(

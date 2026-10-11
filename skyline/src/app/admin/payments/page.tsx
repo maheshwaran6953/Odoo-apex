@@ -5,10 +5,11 @@ import { gatewayReady } from "@/server/razorpay";
 import { PageHeading, money, Empty } from "@/components/club/ui";
 import { PaymentStatus } from "@/components/club/payment-status";
 export default async function StaffPaymentsPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: { status?: string; page?: string; eventId?: string };
+  searchParams: Promise<{ status?: string; page?: string; eventId?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const role = await requireRole(["STAFF", "TREASURER"]);
   const statuses = [
     "INIT",

@@ -8,10 +8,11 @@ import { ActionForm } from "@/components/club/action-form";
 import { cancelRegistration } from "@/server/actions/events";
 import { PageHeading, money } from "@/components/club/ui";
 export default async function TicketPage({
-  params,
+  params: paramsPromise,
 }: {
-  params: { ticketId: string };
+  params: Promise<{ ticketId: string }>;
 }) {
+  const params = await paramsPromise;
   const user = await requireUser();
   const ticket = await db.ticket.findUnique({
     where: { id: params.ticketId },

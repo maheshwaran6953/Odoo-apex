@@ -15,10 +15,11 @@ import { ExpenseForm } from "@/components/club/expense-section";
 import { PageHeading, Stat, money, date, Empty } from "@/components/club/ui";
 
 export default async function TreasurerPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const searchParams = await searchParamsPromise;
   await requireRole(["TREASURER"]);
   const user = await requireUser();
   let filters = financeFilters({});

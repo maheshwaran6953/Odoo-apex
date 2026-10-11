@@ -75,4 +75,20 @@ In a separate terminal use npm run events:watch for local-only jobs, not in addi
 - Production npm audit --omit=dev: zero vulnerabilities. Full development audit: nine findings (two moderate, seven high), tracked separately.
 - Mail queue regression: passed with mocked provider; no emails sent.
 - Production HTTP smoke checks on port 3002: passed (public pages, protected redirects, denied receipt/jobs).
-- Vercel project creation verified. Credentials transfer and actual deployment await explicit authorization; no live acceptance claimed.
+- Production configuration and deployment completed after authorization. See live verification below.
+
+## Live deployment verification — 11 October 2026
+
+- Canonical URL: https://odoo-apex-skyline.vercel.app
+- Vercel project: maheshwaran-ps-projects/odoo-apex-skyline; root directory skyline.
+- Verified application commit: 4c572a9 on main.
+- Deployment ID: JBP1wqC6qnbCt6kEJvkGEAA9oQRg. Vercel displayed Ready, Production / Current, created at 13:09:32 Asia/Kolkata; build duration 1 minute 6 seconds.
+- Production-only server credentials saved as secret variables. Public club time zone is Asia/Kolkata. APP_URL uses the canonical HTTPS URL. Preview deployments do not share these credentials.
+- Live verify:deployment passed: public login/register/events/forgot-password/reset-password pages returned 200; protected pages redirected to login; unauthenticated receipt/job endpoints and a wrong scheduler bearer returned 401.
+- Browser verification: live HTTPS login rendered successfully.
+- GitHub scheduler configured with SKYLINE_APP_URL, SKYLINE_SCHEDULER_ENABLED and private SKYLINE_CRON_SECRET. Manual acceptance run #1 completed successfully in 4 seconds: https://github.com/maheshwaran6953/Odoo-apex/actions/runs/38122314124
+- The successful workflow proves its authenticated curl request returned a successful HTTP response. GitHub's browser log pane failed to display step output, so no sent/failed email counts or hosted inbox delivery are claimed from that run.
+- Schedule is every five minutes, best effort: GitHub Actions may delay scheduled runs. Maximum hosted mail batch is 10. Stop local events:watch when using this hosted scheduler against the same database.
+- PAYMENT_JOBS_ENABLED=false; Razorpay credentials were not copied to Vercel. No payment acceptance is claimed.
+- Existing Supabase records and accounts were preserved. No reset, seed or bootstrap was performed.
+- Broader manual acceptance (OTP/reset inbox delivery on the live origin, role matrix, real camera scanning and complete business journeys) remains separate from deployment smoke checks.

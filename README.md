@@ -1,5 +1,7 @@
 # Skyline Student Organization System
 
+Live application: [odoo-apex-skyline.vercel.app](https://odoo-apex-skyline.vercel.app). Sign in with your existing account. Hosted reminders use GitHub Actions; do not run the local watcher against the same database at the same time.
+
 Skyline is a campus club workspace for memberships, events, QR tickets, merchandise, volunteer tasks, announcements and finances. It replaces scattered spreadsheets, notebooks and group messages with persistent records and role-controlled workflows.
 
 This repository contains the **Student Organization System**, not LoomFlow. The application is in [`skyline/`](skyline/). Updated: **11 October 2026**.
